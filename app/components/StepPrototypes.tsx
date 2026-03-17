@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Step, Depth, Lang, ProtoId, Message, ConceptData } from '@/types/index';
+import SettingsModal from '@/app/components/SettingsModal';
 
 interface StepPrototypesProps {
   topic: string;
@@ -17,6 +18,8 @@ interface StepPrototypesProps {
   showToast: (msg: string) => void;
   showSettings: boolean;
   setShowSettings: (v: boolean) => void;
+  settings: { anthropicKey: string; openaiKey: string; geminiKey: string; maxSessions: number; expiryDate: string; };
+  setSettings: (v: any) => void;
   generatedConcepts: Record<string, ConceptData>;
   setGeneratedConcepts: (v: Record<string, ConceptData>) => void;
   generatedPrototypes: Record<string, string>;
@@ -31,7 +34,8 @@ export default function StepPrototypes({
   topic, depth, lang, darkMode,
   navigateTo, goBack, history,
   selectedProto, setSelectedProto,
-  showToast, setShowSettings,
+  showToast, showSettings, setShowSettings,
+  settings, setSettings,
   generatedConcepts, setGeneratedConcepts,
   generatedPrototypes, setGeneratedPrototypes,
   messages,
@@ -86,6 +90,7 @@ export default function StepPrototypes({
           topic,
           lang,
           count: conceptCount,
+          apiKey: settings.anthropicKey || undefined,
           messages: messages.filter(m => !m.isConclusion),
         }),
       });
@@ -105,7 +110,7 @@ export default function StepPrototypes({
       const response = await fetch('/api/generate-prototypes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, lang, concepts: generatedConcepts }),
+        body: JSON.stringify({ topic, lang, concepts: generatedConcepts, apiKey: settings.anthropicKey || undefined }),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
@@ -231,6 +236,8 @@ export default function StepPrototypes({
 
   // ---- Shared nav ----
   const Nav = () => (
+    <>
+    <SettingsModal show={showSettings} onClose={() => setShowSettings(false)} settings={settings} setSettings={setSettings} darkMode={dm} lang={lang} showToast={showToast} />
     <nav className={`sticky top-0 z-40 border-b ${dm ? 'bg-slate-900 border-slate-700/50' : 'bg-white border-slate-200'}`}>
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -259,6 +266,7 @@ export default function StepPrototypes({
         <button onClick={() => setShowSettings(true)} className={`text-xs px-3 py-1.5 rounded-md border ${dm ? 'border-slate-700 hover:bg-slate-800 text-slate-400' : 'border-slate-200 hover:bg-slate-100 text-slate-500'}`}>⚙️</button>
       </div>
     </nav>
+    </>
   );
 
   // ---- Loading spinner ----

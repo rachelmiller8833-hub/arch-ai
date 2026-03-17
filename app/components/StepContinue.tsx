@@ -90,7 +90,9 @@ export default function StepContinue({
     scrollToBottom();
   }, [continueMessages]);
 
-  const protoName = selectedProto ? PROTO_NAMES[selectedProto] : 'your selected prototype';
+  const protoName = selectedProto
+    ? (generatedConcepts[selectedProto]?.title || PROTO_NAMES[selectedProto] || selectedProto)
+    : 'your selected prototype';
 
   async function generateRefinedHtml() {
     if (!selectedProto || !generatedConcepts[selectedProto]) return;
@@ -205,7 +207,8 @@ export default function StepContinue({
           if (!eventMatch || !dataMatch) continue;
 
           const event = eventMatch[1];
-          const data  = JSON.parse(dataMatch[1]);
+          let data: any;
+          try { data = JSON.parse(dataMatch[1]); } catch { continue; }
 
           handleSSEEvent(event, data);
         }
@@ -319,7 +322,7 @@ export default function StepContinue({
           }`}>
             <div className="flex items-center gap-2 mb-2">
               <span className="font-bold text-sm text-indigo-500">
-                {msg.conclusionTitle}
+                {msg.conclusionTitle ?? '🎯 Conclusion'}
               </span>
               <span className={`font-mono text-xs px-2 py-0.5 rounded ${
                 dm ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-100 text-indigo-600'

@@ -3,8 +3,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { ConceptData } from "@/types";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 interface DebateMessage {
   name: string;
   role: string;
@@ -12,7 +10,9 @@ interface DebateMessage {
 }
 
 export async function POST(request: Request) {
-  const { topic, messages, lang = 'en', count = 3 } = await request.json();
+  const { topic, messages, lang = 'en', count = 3, apiKey } = await request.json();
+  if (!apiKey) return new Response("No API key provided. Add your Anthropic key in Settings.", { status: 401 });
+  const anthropic = new Anthropic({ apiKey });
 
   if (!topic || !messages?.length) {
     return new Response("Missing topic or messages", { status: 400 });
@@ -59,12 +59,10 @@ Return ONLY valid JSON in this exact shape (no markdown, no explanation):
     });
 
     const raw = response.content[0].type === "text" ? response.content[0].text : "";
-    // Extract the JSON object directly — handles any surrounding text or markdown fences
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("No JSON found in response");
     const concepts: Record<string, ConceptData> = JSON.parse(jsonMatch[0]);
 
-    // Validate shape
     const requiredIds = conceptCount === 2 ? (["A", "B"] as const) : (["A", "B", "C"] as const);
     for (const id of requiredIds) {
       if (!concepts[id]?.title) throw new Error(`Missing concept ${id}`);

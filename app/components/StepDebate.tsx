@@ -209,7 +209,8 @@ export default function StepDebate({
           if (!eventMatch || !dataMatch) continue;
 
           const event = eventMatch[1];
-          const data  = JSON.parse(dataMatch[1]);
+          let data: any;
+          try { data = JSON.parse(dataMatch[1]); } catch { continue; }
 
           handleSSEEvent(event, data);
         }
@@ -380,7 +381,7 @@ export default function StepDebate({
     showToast('Export downloaded!');
   }
 
-  const agentCount = depth === 'quick' ? 4 : 8;
+  const agentCount = depth === 'mini' ? 3 : depth === 'quick' ? 4 : 8;
 
   return (
     <div dir={isHe ? 'rtl' : 'ltr'} className="min-h-screen flex flex-col">
