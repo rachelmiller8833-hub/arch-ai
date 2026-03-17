@@ -1,0 +1,522 @@
+// app/components/StepPrototypes.tsx
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Step, Depth, Lang, ProtoId, Message, ConceptData } from '@/types/index';
+
+interface StepPrototypesProps {
+  topic: string;
+  depth: Depth;
+  lang: Lang;
+  darkMode: boolean;
+  navigateTo: (target: Step) => void;
+  goBack: () => void;
+  history: Step[];
+  selectedProto: ProtoId;
+  setSelectedProto: (v: ProtoId) => void;
+  showToast: (msg: string) => void;
+  showSettings: boolean;
+  setShowSettings: (v: boolean) => void;
+  generatedConcepts: Record<string, ConceptData>;
+  setGeneratedConcepts: (v: Record<string, ConceptData>) => void;
+  generatedPrototypes: Record<string, string>;
+  setGeneratedPrototypes: (v: Record<string, string>) => void;
+  messages: Message[];
+  onNewSession: () => void;
+}
+
+type Phase = 'extracting' | 'reviewing' | 'generating' | 'done';
+
+export default function StepPrototypes({
+  topic, depth, lang, darkMode,
+  navigateTo, goBack, history,
+  selectedProto, setSelectedProto,
+  showToast, setShowSettings,
+  generatedConcepts, setGeneratedConcepts,
+  generatedPrototypes, setGeneratedPrototypes,
+  messages,
+  onNewSession,
+}: StepPrototypesProps) {
+
+  const isHe = lang === 'he';
+  const dm = darkMode;
+  const subtle = dm ? 'text-slate-400' : 'text-slate-500';
+  const conceptCount = depth === 'mini' ? 2 : 3;
+
+  // Determine initial phase based on existing state
+  const initialPhase = (): Phase => {
+    if (Object.keys(generatedPrototypes).length >= conceptCount) return 'done';
+    if (Object.keys(generatedConcepts).length >= conceptCount) return 'reviewing';
+    return 'extracting';
+  };
+
+  const [phase, setPhase] = useState<Phase>(initialPhase);
+  const [editingId, setEditingId] = useState<'A' | 'B' | 'C' | null>(null);
+  const [editDraft, setEditDraft] = useState<ConceptData | null>(null);
+
+  function startEdit(concept: ConceptData) {
+    setEditingId(concept.id);
+    setEditDraft({ ...concept });
+  }
+
+  function saveEdit() {
+    if (!editDraft) return;
+    setGeneratedConcepts({ ...generatedConcepts, [editDraft.id]: editDraft });
+    setEditingId(null);
+    setEditDraft(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditDraft(null);
+  }
+
+  useEffect(() => {
+    if (phase === 'extracting') {
+      extractConcepts();
+    }
+  }, []);
+
+  async function extractConcepts() {
+    try {
+      const response = await fetch('/api/extract-concepts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic,
+          lang,
+          count: conceptCount,
+          messages: messages.filter(m => !m.isConclusion),
+        }),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      setGeneratedConcepts(data);
+      setPhase('reviewing');
+    } catch (err) {
+      showToast(`Failed to extract concepts: ${String(err)}`);
+      setPhase('reviewing'); // show empty state rather than infinite spinner
+    }
+  }
+
+  async function generatePrototypes() {
+    setPhase('generating');
+    try {
+      const response = await fetch('/api/generate-prototypes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic, lang, concepts: generatedConcepts }),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      setGeneratedPrototypes(data);
+      setPhase('done');
+    } catch (err) {
+      showToast(`Failed to generate prototypes: ${String(err)}`);
+      setPhase('reviewing');
+    }
+  }
+
+  function handlePreview(id: ProtoId) {
+    if (!id || !generatedPrototypes[id]) return;
+    const blob = new Blob([generatedPrototypes[id]], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  }
+
+  function handleSelect(id: ProtoId) {
+    if (!id) return;
+    setSelectedProto(id);
+    navigateTo('continue');
+  }
+
+  function handleDownloadHTML(id: ProtoId) {
+    if (!id || !generatedPrototypes[id]) return;
+    const blob = new Blob([generatedPrototypes[id]], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `archai-prototype-${id}-${topic.replace(/\s+/g, '-').toLowerCase().slice(0, 30)}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`Prototype ${id} downloaded!`);
+  }
+
+  function handleDownloadPRD() {
+    const lines: string[] = [
+      `# ArchAI — Product Requirements Document`,
+      ``,
+      `**Project:** ${topic}`,
+      `**Generated:** ${new Date().toLocaleDateString()}`,
+      `**Powered by:** ArchAI — Multi-agent AI Architecture Brainstorming`,
+      ``,
+      `---`,
+      ``,
+      `## Executive Summary`,
+      ``,
+      `This PRD was generated by an 8-agent AI architecture debate covering frontend, backend, product strategy, business model, security, infrastructure, and data analytics perspectives.`,
+      ``,
+      `---`,
+      ``,
+      `## Proposed Product Concepts`,
+      ``,
+    ];
+    for (const id of (['A', 'B', 'C'] as const).filter(i => generatedConcepts[i])) {
+      const c = generatedConcepts[id];
+      if (!c) continue;
+      lines.push(`### Concept ${id}: ${c.title}`);
+      lines.push(``);
+      lines.push(c.description);
+      lines.push(``);
+      lines.push(`**UX Direction:** ${c.ux}`);
+      lines.push(``);
+      lines.push(`**Visual Direction:** ${c.visual}`);
+      lines.push(``);
+    }
+    lines.push(`---`);
+    lines.push(``);
+    lines.push(`## Architecture Recommendations`);
+    lines.push(``);
+    lines.push(`### Recommended Tech Stack`);
+    lines.push(``);
+    lines.push(`**Frontend**`);
+    lines.push(`- Framework: Next.js 15 (App Router)`);
+    lines.push(`- Styling: Tailwind CSS`);
+    lines.push(`- State Management: React hooks + Context API`);
+    lines.push(`- Animations: Framer Motion`);
+    lines.push(``);
+    lines.push(`**Backend**`);
+    lines.push(`- API: Next.js API Routes`);
+    lines.push(`- Auth: Supabase Auth`);
+    lines.push(`- Database: PostgreSQL via Supabase`);
+    lines.push(`- Caching: Redis (Upstash)`);
+    lines.push(``);
+    lines.push(`**Infrastructure**`);
+    lines.push(`- Hosting: Vercel`);
+    lines.push(`- File Storage: Cloudflare R2 (zero egress costs)`);
+    lines.push(`- CDN: Cloudflare`);
+    lines.push(`- Monitoring: PostHog + Sentry`);
+    lines.push(``);
+    lines.push(`### Key Technical Decisions`);
+    lines.push(``);
+    lines.push(`1. **Browser Emulation:** js-dos (DOSBox compiled to WebAssembly) for in-browser play`);
+    lines.push(`2. **Offline Installers:** NSIS scripts bundling DOSBox + game files into standalone .exe`);
+    lines.push(`3. **CI/CD for installers:** GitHub Actions pipeline to auto-generate .exe per game`);
+    lines.push(`4. **Legal:** Start with GPL/freeware titles only. DMCA compliance from day one.`);
+    lines.push(``);
+    lines.push(`---`);
+    lines.push(``);
+    lines.push(`## Debate Transcript`);
+    lines.push(``);
+    for (const msg of messages) {
+      lines.push(`### ${msg.name} (${msg.role})`);
+      lines.push(``);
+      lines.push(msg.text);
+      lines.push(``);
+    }
+    const content = lines.join('\n');
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `archai-prd-${topic.replace(/\s+/g, '-').toLowerCase().slice(0, 30)}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('PRD downloaded!');
+  }
+
+  // ---- Shared nav ----
+  const Nav = () => (
+    <nav className={`sticky top-0 z-40 border-b ${dm ? 'bg-slate-900 border-slate-700/50' : 'bg-white border-slate-200'}`}>
+      <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          {history.length > 0 && (
+            <button onClick={goBack} className={`text-xs px-2.5 py-1.5 rounded-md border ${dm ? 'border-slate-700 hover:bg-slate-800 text-slate-400' : 'border-slate-200 hover:bg-slate-100 text-slate-500'}`}>← Back</button>
+          )}
+          <button onClick={onNewSession} className="flex items-center gap-2 cursor-pointer">
+            <div className="w-7 h-7 rounded-md bg-indigo-600 flex items-center justify-center">
+              <span className="text-white text-xs font-bold font-mono">A</span>
+            </div>
+            <span className="font-bold text-sm">ArchAI</span>
+          </button>
+        </div>
+        <div className="hidden md:flex items-center gap-1 text-xs font-medium">
+          {(['Configure', 'Discussion', 'Choose Design', 'Refine']).map((label, i) => (
+            <div key={i} className="flex items-center gap-1">
+              <span className={`px-3 py-1 rounded-full ${
+                i < 2  ? 'bg-emerald-500 text-white' :
+                i === 2 ? 'bg-indigo-600 text-white' :
+                dm ? 'border border-slate-600 text-slate-500' : 'border border-slate-300 text-slate-400'
+              }`}>{i + 1} {label}</span>
+              {i < 3 && <span className={subtle}>›</span>}
+            </div>
+          ))}
+        </div>
+        <button onClick={() => setShowSettings(true)} className={`text-xs px-3 py-1.5 rounded-md border ${dm ? 'border-slate-700 hover:bg-slate-800 text-slate-400' : 'border-slate-200 hover:bg-slate-100 text-slate-500'}`}>⚙️</button>
+      </div>
+    </nav>
+  );
+
+  // ---- Loading spinner ----
+  const Spinner = ({ label }: { label: string }) => (
+    <div className="flex-1 flex items-center justify-center py-32">
+      <div className="text-center">
+        <div className="flex justify-center gap-1 mb-4">
+          {[0, 150, 300].map(delay => (
+            <span key={delay} className="w-2 h-2 rounded-full bg-indigo-500"
+              style={{ animation: `bounce-dot 1s infinite ${delay}ms` }} />
+          ))}
+        </div>
+        <p className="font-semibold text-sm mb-1">{label}</p>
+        <p className={`text-xs ${subtle}`}>{topic}</p>
+      </div>
+    </div>
+  );
+
+  // ---- Phase: extracting ----
+  if (phase === 'extracting') {
+    return (
+      <div dir={isHe ? 'rtl' : 'ltr'} className="min-h-screen flex flex-col">
+        <Nav />
+        <Spinner label={isHe ? 'מחלץ רעיונות מהדיון...' : 'Extracting product concepts from the debate...'} />
+      </div>
+    );
+  }
+
+  // ---- Phase: reviewing (show concepts, wait for confirmation) ----
+  if (phase === 'reviewing') {
+    const conceptList = (['A', 'B', 'C'] as const).map(id => generatedConcepts[id]).filter(Boolean);
+    return (
+      <div dir={isHe ? 'rtl' : 'ltr'} className="min-h-screen flex flex-col">
+        <Nav />
+        <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-10">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-bold mb-2">
+              {isHe ? `${conceptCount} כיוונים מוצרים` : `${conceptCount} Product Directions`}
+            </h2>
+            <p className={`text-sm ${subtle}`}>
+              {isHe
+                ? 'בדוק שהכיוונים שונים זה מזה לפני יצירת האתרים'
+                : 'Verify these are distinct directions before generating the prototypes'}
+            </p>
+          </div>
+
+          {conceptList.length === 0 ? (
+            <p className={`text-center text-sm ${subtle} py-12`}>Concept extraction failed. Try going back and retrying.</p>
+          ) : (
+            <>
+              <div className={`grid grid-cols-1 ${conceptCount === 2 ? 'lg:grid-cols-2 max-w-2xl mx-auto' : 'lg:grid-cols-3'} gap-6 mb-10`}>
+                {conceptList.map((concept) => {
+                  const isEditing = editingId === concept.id;
+                  const draft = isEditing ? editDraft! : concept;
+                  const fieldClass = `w-full px-2.5 py-1.5 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 ${dm ? 'bg-slate-800 border-slate-600 text-slate-100' : 'bg-white border-slate-300 text-slate-900'}`;
+                  return (
+                    <div key={concept.id} className={`rounded-2xl border p-6 flex flex-col gap-4 ${dm ? 'bg-slate-900 border-slate-700/50' : 'bg-white border-slate-200'} ${isEditing ? (dm ? 'ring-2 ring-indigo-500/50' : 'ring-2 ring-indigo-400/40') : ''}`}>
+                      {/* Header */}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                            {concept.id}
+                          </div>
+                          {isEditing ? (
+                            <input
+                              value={draft.title}
+                              onChange={e => setEditDraft({ ...draft, title: e.target.value })}
+                              className={fieldClass}
+                            />
+                          ) : (
+                            <h3 className="font-bold text-base truncate">{concept.title}</h3>
+                          )}
+                        </div>
+                        {!isEditing && (
+                          <button
+                            onClick={() => startEdit(concept)}
+                            title={isHe ? 'ערוך' : 'Edit'}
+                            className={`flex-shrink-0 text-xs px-2.5 py-1 rounded-lg border transition-colors ${dm ? 'border-slate-700 hover:bg-slate-800 text-slate-400' : 'border-slate-200 hover:bg-slate-100 text-slate-500'}`}
+                          >✏️</button>
+                        )}
+                      </div>
+
+                      {/* Description */}
+                      {isEditing ? (
+                        <textarea
+                          value={draft.description}
+                          onChange={e => setEditDraft({ ...draft, description: e.target.value })}
+                          rows={3}
+                          className={`${fieldClass} resize-none`}
+                        />
+                      ) : (
+                        <p className={`text-sm leading-relaxed ${subtle}`}>{concept.description}</p>
+                      )}
+
+                      {/* UX / Visual */}
+                      <div className={`rounded-lg p-3 text-xs space-y-2 ${dm ? 'bg-slate-800' : 'bg-slate-50'}`}>
+                        <div className="flex items-start gap-1.5">
+                          <span className="font-semibold text-indigo-500 flex-shrink-0">UX · </span>
+                          {isEditing ? (
+                            <input
+                              value={draft.ux}
+                              onChange={e => setEditDraft({ ...draft, ux: e.target.value })}
+                              className={`${fieldClass} text-xs`}
+                            />
+                          ) : (
+                            <span className={subtle}>{concept.ux}</span>
+                          )}
+                        </div>
+                        <div className="flex items-start gap-1.5">
+                          <span className="font-semibold text-emerald-500 flex-shrink-0">Visual · </span>
+                          {isEditing ? (
+                            <input
+                              value={draft.visual}
+                              onChange={e => setEditDraft({ ...draft, visual: e.target.value })}
+                              className={`${fieldClass} text-xs`}
+                            />
+                          ) : (
+                            <span className={subtle}>{concept.visual}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Edit action buttons */}
+                      {isEditing && (
+                        <div className="flex gap-2 pt-1">
+                          <button
+                            onClick={saveEdit}
+                            className="flex-1 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold"
+                          >
+                            {isHe ? '✓ שמור' : '✓ Save'}
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className={`flex-1 py-1.5 rounded-lg border text-xs ${dm ? 'border-slate-700 hover:bg-slate-800 text-slate-400' : 'border-slate-200 hover:bg-slate-100 text-slate-500'}`}
+                          >
+                            {isHe ? 'ביטול' : 'Cancel'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="text-center">
+                <button
+                  onClick={generatePrototypes}
+                  className="px-8 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-lg shadow-indigo-500/20 transition-all"
+                >
+                  {isHe ? 'אשר וצור אב-טיפוסים ←' : 'Confirm & Generate Prototypes →'}
+                </button>
+                <p className={`text-xs mt-3 ${subtle}`}>
+                  {isHe
+                    ? `יצירת ${conceptCount} אתרים מלאים — עשוי לקחת 30–60 שניות`
+                    : `Generating ${conceptCount} full websites — may take 30–60 seconds`}
+                </p>
+              </div>
+            </>
+          )}
+        </main>
+      </div>
+    );
+  }
+
+  // ---- Phase: generating ----
+  if (phase === 'generating') {
+    return (
+      <div dir={isHe ? 'rtl' : 'ltr'} className="min-h-screen flex flex-col">
+        <Nav />
+        <Spinner label={isHe ? `בונה ${conceptCount} אתרים...` : `Building ${conceptCount} websites...`} />
+      </div>
+    );
+  }
+
+  // ---- Phase: done (show prototype cards) ----
+  return (
+    <div dir={isHe ? 'rtl' : 'ltr'} className="min-h-screen flex flex-col">
+      <Nav />
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-10">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl font-bold mb-2">
+            {isHe ? `${conceptCount} אב-טיפוסים מוכנים` : `${conceptCount} Prototypes Ready`}
+          </h2>
+          <p className={`text-sm ${subtle} mb-4`}>
+            {isHe ? 'פתח כל אחד לתצוגה מקדימה ובחר את הכיוון שאתה אוהב' : 'Open each to preview, then select the direction you want to refine'}
+          </p>
+          <button
+            onClick={handleDownloadPRD}
+            className={`text-xs px-4 py-2 rounded-lg border transition-colors ${dm ? 'border-slate-700 hover:bg-slate-800 text-slate-400' : 'border-slate-200 hover:bg-slate-100 text-slate-500'}`}
+          >
+            ⬇ {isHe ? 'הורד PRD' : 'Download PRD'}
+          </button>
+        </div>
+
+        <div className={`grid grid-cols-1 ${conceptCount === 2 ? 'lg:grid-cols-2 max-w-2xl mx-auto' : 'lg:grid-cols-3'} gap-6`}>
+          {(['A', 'B', 'C'] as const).filter(id => generatedConcepts[id] || generatedPrototypes[id]).map(id => {
+            const concept = generatedConcepts[id];
+            return (
+              <div
+                key={id}
+                className={`rounded-2xl border overflow-hidden flex flex-col transition-all duration-200 ${
+                  dm ? 'bg-slate-900 border-slate-700/50' : 'bg-white border-slate-200'
+                } ${selectedProto === id ? 'ring-2 ring-indigo-500' : ''}`}
+              >
+                {/* Header */}
+                <div className={`p-5 border-b ${dm ? 'border-slate-700/50' : 'border-slate-100'}`}>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold">
+                      {id}
+                    </div>
+                    <h3 className="font-bold text-base">{concept?.title ?? `Prototype ${id}`}</h3>
+                  </div>
+                  <p className={`text-sm leading-relaxed ${subtle}`}>{concept?.description ?? ''}</p>
+                </div>
+
+                {/* UX / Visual */}
+                {concept && (
+                  <div className={`px-5 py-3 border-b text-xs space-y-1.5 ${dm ? 'border-slate-700/50' : 'border-slate-100'}`}>
+                    <div><span className="font-semibold text-indigo-500">UX · </span><span className={subtle}>{concept.ux}</span></div>
+                    <div><span className="font-semibold text-emerald-500">Visual · </span><span className={subtle}>{concept.visual}</span></div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className={`p-5 flex flex-col gap-2 mt-auto border-t ${dm ? 'border-slate-700/50' : 'border-slate-100'}`}>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handlePreview(id)}
+                      className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                        dm ? 'border-slate-700 hover:bg-slate-800 text-slate-300' : 'border-slate-200 hover:bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {isHe ? 'פתח תצוגה ←' : 'Open Preview →'}
+                    </button>
+                    <button
+                      onClick={() => handleDownloadHTML(id)}
+                      className={`py-2 px-3 rounded-lg text-xs font-medium border transition-colors ${
+                        dm ? 'border-slate-700 hover:bg-slate-800 text-slate-300' : 'border-slate-200 hover:bg-slate-100 text-slate-600'
+                      }`}
+                      title="Download HTML file"
+                    >
+                      ⬇ HTML
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => handleSelect(id)}
+                    className={`w-full py-2 rounded-lg text-xs font-semibold transition-colors ${
+                      selectedProto === id ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                    }`}
+                  >
+                    {selectedProto === id ? (isHe ? '✓ נבחר' : '✓ Selected') : (isHe ? 'בחר זה ←' : 'Select This →')}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </main>
+    </div>
+  );
+}
