@@ -3,6 +3,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Step, Depth, Lang, ProtoId, Message, ConceptData } from '@/types';
+import SettingsModal from '@/app/components/SettingsModal';
 
 interface StepContinueProps {
   topic: string;
@@ -14,7 +15,10 @@ interface StepContinueProps {
   history: Step[];
   selectedProto: ProtoId;
   showToast: (msg: string) => void;
+  showSettings: boolean;
   setShowSettings: (v: boolean) => void;
+  settings: { anthropicKey: string; openaiKey: string; geminiKey: string; maxSessions: number; expiryDate: string; };
+  setSettings: (v: any) => void;
   generatedConcepts: Record<string, ConceptData>;
   // Original debate messages (read-only, shown as context)
   messages: Message[];
@@ -50,7 +54,8 @@ export default function StepContinue({
   topic, depth, lang, darkMode,
   navigateTo, goBack, history,
   selectedProto, showToast,
-  setShowSettings,
+  showSettings, setShowSettings,
+  settings, setSettings,
   generatedConcepts,
   messages,
   continueMessages, setContinueMessages,
@@ -98,6 +103,7 @@ export default function StepContinue({
         body: JSON.stringify({
           topic,
           lang,
+          apiKey: settings.anthropicKey || undefined,
           concept: generatedConcepts[selectedProto],
           refinementMessages: continueMessages
             .filter(m => !m.isConclusion && m.text.trim())
@@ -166,6 +172,9 @@ export default function StepContinue({
           lang,
           depth,
           protoName,
+          apiKey:    settings.anthropicKey || undefined,
+          openaiKey: settings.openaiKey    || undefined,
+          geminiKey: settings.geminiKey    || undefined,
           // Send the last 6 messages as context to keep the request lean
           previousMessages: [...messages, ...continueMessages]
             .filter(m => !m.isConclusion)
@@ -365,6 +374,7 @@ export default function StepContinue({
 
   return (
     <div dir={isHe ? 'rtl' : 'ltr'} className="min-h-screen flex flex-col">
+      <SettingsModal show={showSettings} onClose={() => setShowSettings(false)} settings={settings} setSettings={setSettings} darkMode={dm} lang={lang} showToast={showToast} />
 
       {/* ---- Top Nav ---- */}
       <nav className={`sticky top-0 z-40 border-b ${dm ? 'bg-slate-900 border-slate-700/50' : 'bg-white border-slate-200'}`}>
