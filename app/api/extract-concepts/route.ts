@@ -11,6 +11,25 @@ interface DebateMessage {
 
 export const runtime = 'edge';
 
+/** Extract the first complete JSON object from a string, stopping at the correct closing brace. */
+function extractFirstJson(text: string): string {
+  const start = text.indexOf('{');
+  if (start === -1) throw new Error('No JSON found in response');
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < text.length; i++) {
+    const c = text[i];
+    if (escape)          { escape = false; continue; }
+    if (c === '\\' && inString) { escape = true; continue; }
+    if (c === '"')       { inString = !inString; continue; }
+    if (inString)        { continue; }
+    if (c === '{')       { depth++; }
+    else if (c === '}')  { if (--depth === 0) return text.slice(start, i + 1); }
+  }
+  throw new Error('No complete JSON object found in response');
+}
+
 export async function POST(request: Request) {
   const { topic, messages, lang = 'en', count = 3, apiKey } = await request.json();
   if (!apiKey) return new Response("No API key provided. Add your Anthropic key in Settings.", { status: 401 });
@@ -61,9 +80,7 @@ Return ONLY valid JSON in this exact shape (no markdown, no explanation):
     });
 
     const raw = response.content[0].type === "text" ? response.content[0].text : "";
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("No JSON found in response");
-    const concepts: Record<string, ConceptData> = JSON.parse(jsonMatch[0]);
+    const concepts: Record<string, ConceptData> = JSON.parse(extractFirstJson(raw));
 
     const requiredIds = conceptCount === 2 ? (["A", "B"] as const) : (["A", "B", "C"] as const);
     for (const id of requiredIds) {

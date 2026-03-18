@@ -57,6 +57,8 @@ export default function StepPrototypes({
   const [phase, setPhase] = useState<Phase>(initialPhase);
   const [extractError, setExtractError] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const [protoErrors, setProtoErrors] = useState<Record<string, string>>({});
+  const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<'A' | 'B' | 'C' | null>(null);
   const [editDraft, setEditDraft] = useState<ConceptData | null>(null);
 
@@ -110,64 +112,53 @@ export default function StepPrototypes({
     }
   }
 
+  async function fetchOnePrototype(id: 'A' | 'B' | 'C') {
+    const response = await fetch('/api/generate-prototypes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topic, lang,
+        concepts: { [id]: generatedConcepts[id] },
+        apiKey: settings.anthropicKey || undefined,
+      }),
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(errText || `HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    const { _errors: _, ...htmlMap } = data;
+    setGeneratedPrototypes(prev => ({ ...prev, ...htmlMap }));
+  }
+
   async function generatePrototypes() {
     setPhase('generating');
     setGenerationError(null);
-    try {
-      const response = await fetch('/api/generate-prototypes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, lang, concepts: generatedConcepts, apiKey: settings.anthropicKey || undefined }),
-      });
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(errText || `HTTP ${response.status}`);
+    setProtoErrors({});
+
+    const ids = (['A', 'B', 'C'] as const).filter(id => generatedConcepts[id]);
+    setLoadingIds(new Set(ids));
+
+    for (const id of ids) {
+      try {
+        await fetchOnePrototype(id);
+      } catch (err) {
+        setProtoErrors(prev => ({ ...prev, [id]: String(err) }));
       }
-      if (!response.body) throw new Error('No response body');
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      const errors: string[] = [];
-      let anySucceeded = false;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (value) buffer += decoder.decode(value, { stream: !done });
-
-        const blocks = buffer.split('\n\n');
-        buffer = done ? '' : (blocks.pop() || '');
-
-        for (const block of blocks) {
-          const eventMatch = block.match(/^event: (\w+)/);
-          const dataMatch  = block.match(/\ndata: (.+)/s);
-          if (!eventMatch || !dataMatch) continue;
-
-          let data: any;
-          try { data = JSON.parse(dataMatch[1]); } catch { continue; }
-
-          const event = eventMatch[1];
-          if (event === 'prototype') {
-            setGeneratedPrototypes(prev => ({ ...prev, [data.id]: data.html }));
-            anySucceeded = true;
-            setPhase('done'); // show cards as they arrive
-          } else if (event === 'proto_error') {
-            errors.push(`${data.id}: ${data.message}`);
-          } else if (event === 'done') {
-            if (errors.length) setGenerationError(`Some prototypes failed — ${errors.join(' | ')}`);
-            if (!anySucceeded) setPhase('reviewing');
-            return;
-          }
-        }
-
-        if (done) break;
-      }
-
-      if (!anySucceeded) setPhase('reviewing');
-    } catch (err) {
-      setGenerationError(String(err));
-      setPhase('reviewing');
+      setLoadingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+      setPhase('done');
     }
+  }
+
+  async function retryPrototype(id: 'A' | 'B' | 'C') {
+    setProtoErrors(prev => { const e = { ...prev }; delete e[id]; return e; });
+    setLoadingIds(prev => new Set([...prev, id]));
+    try {
+      await fetchOnePrototype(id);
+    } catch (err) {
+      setProtoErrors(prev => ({ ...prev, [id]: String(err) }));
+    }
+    setLoadingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
   }
 
   function handlePreview(id: ProtoId) {
@@ -536,8 +527,11 @@ export default function StepPrototypes({
         </div>
 
         <div className={`grid grid-cols-1 ${conceptCount === 2 ? 'lg:grid-cols-2 max-w-2xl mx-auto' : 'lg:grid-cols-3'} gap-6`}>
-          {(['A', 'B', 'C'] as const).filter(id => generatedConcepts[id] || generatedPrototypes[id]).map(id => {
+          {(['A', 'B', 'C'] as const).filter(id => generatedConcepts[id]).map(id => {
             const concept = generatedConcepts[id];
+            const isLoading = loadingIds.has(id);
+            const error = protoErrors[id];
+            const html = generatedPrototypes[id];
             return (
               <div
                 key={id}
@@ -564,35 +558,56 @@ export default function StepPrototypes({
                   </div>
                 )}
 
-                {/* Actions */}
+                {/* Actions — three states: loading, error, ready */}
                 <div className={`p-5 flex flex-col gap-2 mt-auto border-t ${dm ? 'border-slate-700/50' : 'border-slate-100'}`}>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handlePreview(id)}
-                      className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors ${
-                        dm ? 'border-slate-700 hover:bg-slate-800 text-slate-300' : 'border-slate-200 hover:bg-slate-100 text-slate-600'
-                      }`}
-                    >
-                      {isHe ? 'פתח תצוגה ←' : 'Open Preview →'}
-                    </button>
-                    <button
-                      onClick={() => handleDownloadHTML(id)}
-                      className={`py-2 px-3 rounded-lg text-xs font-medium border transition-colors ${
-                        dm ? 'border-slate-700 hover:bg-slate-800 text-slate-300' : 'border-slate-200 hover:bg-slate-100 text-slate-600'
-                      }`}
-                      title="Download HTML file"
-                    >
-                      ⬇ HTML
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => handleSelect(id)}
-                    className={`w-full py-2 rounded-lg text-xs font-semibold transition-colors ${
-                      selectedProto === id ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                    }`}
-                  >
-                    {selectedProto === id ? (isHe ? '✓ נבחר' : '✓ Selected') : (isHe ? 'בחר זה ←' : 'Select This →')}
-                  </button>
+                  {isLoading ? (
+                    <div className="flex items-center justify-center gap-2 py-3">
+                      <span className="w-4 h-4 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />
+                      <span className={`text-xs ${subtle}`}>{isHe ? 'בונה...' : 'Building...'}</span>
+                    </div>
+                  ) : error ? (
+                    <>
+                      <p className={`text-xs ${dm ? 'text-red-400' : 'text-red-600'} line-clamp-2`}>{error}</p>
+                      <button
+                        onClick={() => retryPrototype(id as 'A' | 'B' | 'C')}
+                        className={`w-full py-2 rounded-lg text-xs font-semibold border transition-colors ${
+                          dm ? 'border-slate-700 hover:bg-slate-800 text-slate-300' : 'border-slate-200 hover:bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        ↺ {isHe ? 'נסה שוב' : 'Retry'}
+                      </button>
+                    </>
+                  ) : html ? (
+                    <>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handlePreview(id)}
+                          className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                            dm ? 'border-slate-700 hover:bg-slate-800 text-slate-300' : 'border-slate-200 hover:bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {isHe ? 'פתח תצוגה ←' : 'Open Preview →'}
+                        </button>
+                        <button
+                          onClick={() => handleDownloadHTML(id)}
+                          className={`py-2 px-3 rounded-lg text-xs font-medium border transition-colors ${
+                            dm ? 'border-slate-700 hover:bg-slate-800 text-slate-300' : 'border-slate-200 hover:bg-slate-100 text-slate-600'
+                          }`}
+                          title="Download HTML file"
+                        >
+                          ⬇ HTML
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => handleSelect(id)}
+                        className={`w-full py-2 rounded-lg text-xs font-semibold transition-colors ${
+                          selectedProto === id ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                        }`}
+                      >
+                        {selectedProto === id ? (isHe ? '✓ נבחר' : '✓ Selected') : (isHe ? 'בחר זה ←' : 'Select This →')}
+                      </button>
+                    </>
+                  ) : null}
                 </div>
               </div>
             );
