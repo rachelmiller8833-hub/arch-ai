@@ -55,6 +55,7 @@ export default function StepPrototypes({
   };
 
   const [phase, setPhase] = useState<Phase>(initialPhase);
+  const [extractError, setExtractError] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<'A' | 'B' | 'C' | null>(null);
   const [editDraft, setEditDraft] = useState<ConceptData | null>(null);
@@ -83,6 +84,7 @@ export default function StepPrototypes({
   }, []);
 
   async function extractConcepts() {
+    setExtractError(null);
     try {
       const response = await fetch('/api/extract-concepts', {
         method: 'POST',
@@ -95,13 +97,16 @@ export default function StepPrototypes({
           messages: messages.filter(m => !m.isConclusion),
         }),
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || `HTTP ${response.status}`);
+      }
       const data = await response.json();
       setGeneratedConcepts(data);
       setPhase('reviewing');
     } catch (err) {
-      showToast(`Failed to extract concepts: ${String(err)}`);
-      setPhase('reviewing'); // show empty state rather than infinite spinner
+      setExtractError(String(err));
+      setPhase('reviewing');
     }
   }
 
@@ -333,7 +338,20 @@ export default function StepPrototypes({
           )}
 
           {conceptList.length === 0 ? (
-            <p className={`text-center text-sm ${subtle} py-12`}>Concept extraction failed. Try going back and retrying.</p>
+            <div className="text-center py-12 space-y-4">
+              <div className={`inline-block rounded-xl border p-6 text-left max-w-md ${dm ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'}`}>
+                <p className={`font-semibold text-sm mb-2 ${dm ? 'text-red-400' : 'text-red-700'}`}>Concept extraction failed</p>
+                {extractError && (
+                  <p className={`font-mono text-xs mb-4 ${dm ? 'text-red-400/70' : 'text-red-600/80'}`}>{extractError}</p>
+                )}
+                <button
+                  onClick={() => { setPhase('extracting'); extractConcepts(); }}
+                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold"
+                >
+                  ↺ Retry
+                </button>
+              </div>
+            </div>
           ) : (
             <>
               <div className={`grid grid-cols-1 ${conceptCount === 2 ? 'lg:grid-cols-2 max-w-2xl mx-auto' : 'lg:grid-cols-3'} gap-6 mb-10`}>
