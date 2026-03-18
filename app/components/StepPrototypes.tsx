@@ -126,9 +126,39 @@ export default function StepPrototypes({
       const errText = await response.text();
       throw new Error(errText || `HTTP ${response.status}`);
     }
-    const data = await response.json();
-    const { _errors: _, ...htmlMap } = data;
-    setGeneratedPrototypes(prev => ({ ...prev, ...htmlMap }));
+    if (!response.body) throw new Error('No response body');
+
+    // Route streams SSE — read until we get the 'prototype' event with the complete HTML
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (value) buffer += decoder.decode(value, { stream: !done });
+
+      const blocks = buffer.split('\n\n');
+      buffer = done ? '' : (blocks.pop() || '');
+
+      for (const block of blocks) {
+        const eventMatch = block.match(/^event: (\w+)/);
+        const dataMatch  = block.match(/\ndata: (.+)/s);
+        if (!eventMatch || !dataMatch) continue;
+
+        let data: any;
+        try { data = JSON.parse(dataMatch[1]); } catch { continue; }
+
+        if (eventMatch[1] === 'prototype' && data.id === id) {
+          setGeneratedPrototypes(prev => ({ ...prev, [id]: data.html }));
+          return;
+        }
+        if (eventMatch[1] === 'proto_error' && data.id === id) {
+          throw new Error(data.message || 'Generation failed');
+        }
+      }
+
+      if (done) break;
+    }
   }
 
   async function generatePrototypes() {

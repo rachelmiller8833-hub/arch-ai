@@ -5,14 +5,8 @@ import { ConceptData } from "@/types";
 
 export const runtime = 'edge';
 
-async function generateHTML(anthropic: Anthropic, concept: ConceptData, topic: string, langNote = ''): Promise<string> {
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 6000,
-    messages: [
-      {
-        role: "user",
-        content: `Build a complete, beautiful, self-contained HTML prototype for this product:
+const PROMPT = (concept: ConceptData, topic: string, langNote: string) => `\
+Build a complete, beautiful, self-contained HTML prototype for this product:
 
 Product name: ${concept.title}
 What it is: ${concept.description}
@@ -28,18 +22,7 @@ CRITICAL RULES — read carefully:
 5. Make it look like a real launched product (polished, not a wireframe).
 6. Use Google Fonts via a single <link> tag in <head> if needed.
 7. No other external dependencies.
-8. Return ONLY the HTML. Start with <!DOCTYPE html>. No markdown, no explanation.${langNote}`,
-      },
-    ],
-  });
-
-  const text = response.content[0].type === "text" ? response.content[0].text : "";
-  return text
-    .replace(/^```html\n?/m, "")
-    .replace(/^```\n?/m, "")
-    .replace(/\n?```$/m, "")
-    .trim();
-}
+8. Return ONLY the HTML. Start with <!DOCTYPE html>. No markdown, no explanation.${langNote}`;
 
 export async function POST(request: Request) {
   const { topic, concepts, lang = 'en', apiKey } = await request.json() as {
@@ -57,25 +40,52 @@ export async function POST(request: Request) {
   }
 
   const langNote = lang === 'he'
-    ? '\n10. Write ALL visible text content in the HTML (nav links, headings, paragraphs, button labels, etc.) in Hebrew (עברית). Add dir="rtl" to the <body> tag.'
+    ? '\n10. Write ALL visible text content in the HTML in Hebrew (עברית). Add dir="rtl" to the <body> tag.'
     : '';
 
-  // Use allSettled so a single failure doesn't discard succeeded results
-  const settled = await Promise.allSettled(
-    ids.map(id => generateHTML(anthropic, concepts[id], topic, langNote))
-  );
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (event: string, data: object) => {
+        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+      };
 
-  const result: Record<string, string> = {};
-  const errors: string[] = [];
-  ids.forEach((id, i) => {
-    const s = settled[i];
-    if (s.status === 'fulfilled') result[id] = s.value;
-    else errors.push(`${id}: ${String(s.reason)}`);
+      for (const id of ids) {
+        try {
+          let html = '';
+
+          // Stream tokens — this keeps the connection alive so Vercel never times out
+          const s = anthropic.messages.stream({
+            model: "claude-sonnet-4-6",
+            max_tokens: 6000,
+            messages: [{ role: "user", content: PROMPT(concepts[id], topic, langNote) }],
+          });
+
+          for await (const chunk of s) {
+            if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+              html += chunk.delta.text;
+              send('token', { id }); // heartbeat — keeps Vercel connection alive
+            }
+          }
+
+          html = html
+            .replace(/^```html\n?/m, '')
+            .replace(/^```\n?/m, '')
+            .replace(/\n?```$/m, '')
+            .trim();
+
+          send('prototype', { id, html });
+        } catch (err) {
+          send('proto_error', { id, message: String(err) });
+        }
+      }
+
+      send('done', {});
+      controller.close();
+    },
   });
 
-  if (Object.keys(result).length === 0) {
-    return new Response(`Generation failed: ${errors.join(' | ')}`, { status: 500 });
-  }
-
-  return Response.json({ ...result, _errors: errors.length ? errors : undefined });
+  return new Response(stream, {
+    headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
+  });
 }
