@@ -51,7 +51,8 @@ export async function POST(request: Request) {
   if (!apiKey) return new Response("No API key provided. Add your Anthropic key in Settings.", { status: 401 });
   const anthropic = new Anthropic({ apiKey });
 
-  if (!topic || !concepts?.A || !concepts?.B) {
+  const ids = (['A', 'B', 'C'] as const).filter(id => concepts[id]);
+  if (!topic || ids.length === 0) {
     return new Response("Missing topic or concepts", { status: 400 });
   }
 
@@ -59,14 +60,22 @@ export async function POST(request: Request) {
     ? '\n10. Write ALL visible text content in the HTML (nav links, headings, paragraphs, button labels, etc.) in Hebrew (עברית). Add dir="rtl" to the <body> tag.'
     : '';
 
-  try {
-    const ids = (['A', 'B', 'C'] as const).filter(id => concepts[id]);
-    const htmlResults = await Promise.all(ids.map(id => generateHTML(anthropic, concepts[id], topic, langNote)));
-    const result = Object.fromEntries(ids.map((id, i) => [id, htmlResults[i]]));
+  // Use allSettled so a single failure doesn't discard the other results
+  const settled = await Promise.allSettled(
+    ids.map(id => generateHTML(anthropic, concepts[id], topic, langNote))
+  );
 
-    return Response.json(result);
+  const result: Record<string, string> = {};
+  const errors: string[] = [];
+  ids.forEach((id, i) => {
+    const s = settled[i];
+    if (s.status === 'fulfilled') result[id] = s.value;
+    else errors.push(`${id}: ${String(s.reason)}`);
+  });
 
-  } catch (err) {
-    return new Response(`Generation failed: ${String(err)}`, { status: 500 });
+  if (Object.keys(result).length === 0) {
+    return new Response(`Generation failed: ${errors.join(' | ')}`, { status: 500 });
   }
+
+  return Response.json({ ...result, _errors: errors.length ? errors : undefined });
 }

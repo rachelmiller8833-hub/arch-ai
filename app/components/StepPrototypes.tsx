@@ -55,6 +55,7 @@ export default function StepPrototypes({
   };
 
   const [phase, setPhase] = useState<Phase>(initialPhase);
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<'A' | 'B' | 'C' | null>(null);
   const [editDraft, setEditDraft] = useState<ConceptData | null>(null);
 
@@ -106,18 +107,29 @@ export default function StepPrototypes({
 
   async function generatePrototypes() {
     setPhase('generating');
+    setGenerationError(null);
     try {
       const response = await fetch('/api/generate-prototypes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic, lang, concepts: generatedConcepts, apiKey: settings.anthropicKey || undefined }),
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || `HTTP ${response.status}`);
+      }
       const data = await response.json();
-      setGeneratedPrototypes(data);
+      const { _errors, ...htmlMap } = data;
+      if (Object.keys(htmlMap).length === 0) throw new Error('No prototypes returned');
+      setGeneratedPrototypes(htmlMap);
+      if (_errors?.length) {
+        setGenerationError(`Partial failure — ${_errors.join(' | ')}`);
+        showToast(`${Object.keys(htmlMap).length}/${conceptCount} prototypes generated`);
+      }
       setPhase('done');
     } catch (err) {
-      showToast(`Failed to generate prototypes: ${String(err)}`);
+      const msg = String(err);
+      setGenerationError(msg);
       setPhase('reviewing');
     }
   }
@@ -313,6 +325,13 @@ export default function StepPrototypes({
             </p>
           </div>
 
+          {generationError && (
+            <div className={`mb-6 p-4 rounded-xl border text-sm ${dm ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-red-50 border-red-200 text-red-700'}`}>
+              <p className="font-semibold mb-1">Generation failed — please try again</p>
+              <p className="font-mono text-xs opacity-80">{generationError}</p>
+            </div>
+          )}
+
           {conceptList.length === 0 ? (
             <p className={`text-center text-sm ${subtle} py-12`}>Concept extraction failed. Try going back and retrying.</p>
           ) : (
@@ -446,6 +465,12 @@ export default function StepPrototypes({
     <div dir={isHe ? 'rtl' : 'ltr'} className="min-h-screen flex flex-col">
       <Nav />
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-10">
+        {generationError && (
+          <div className={`mb-6 p-4 rounded-xl border text-sm ${dm ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-700'}`}>
+            <p className="font-semibold mb-1">Partial generation</p>
+            <p className="font-mono text-xs opacity-80">{generationError}</p>
+          </div>
+        )}
         <div className="text-center mb-10">
           <h2 className="text-2xl font-bold mb-2">
             {isHe ? `${conceptCount} אב-טיפוסים מוכנים` : `${conceptCount} Prototypes Ready`}
