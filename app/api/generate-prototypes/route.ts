@@ -3,7 +3,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { ConceptData } from "@/types";
 
-export const maxDuration = 60;
+export const runtime = 'edge';
 
 async function generateHTML(anthropic: Anthropic, concept: ConceptData, topic: string, langNote = ''): Promise<string> {
   const response = await anthropic.messages.create({
@@ -60,22 +60,34 @@ export async function POST(request: Request) {
     ? '\n10. Write ALL visible text content in the HTML (nav links, headings, paragraphs, button labels, etc.) in Hebrew (עברית). Add dir="rtl" to the <body> tag.'
     : '';
 
-  // Use allSettled so a single failure doesn't discard the other results
-  const settled = await Promise.allSettled(
-    ids.map(id => generateHTML(anthropic, concepts[id], topic, langNote))
-  );
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (event: string, data: object) => {
+        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+      };
 
-  const result: Record<string, string> = {};
-  const errors: string[] = [];
-  ids.forEach((id, i) => {
-    const s = settled[i];
-    if (s.status === 'fulfilled') result[id] = s.value;
-    else errors.push(`${id}: ${String(s.reason)}`);
+      // Generate all in parallel — send each prototype as it finishes
+      await Promise.allSettled(
+        ids.map(async (id) => {
+          try {
+            const html = await generateHTML(anthropic, concepts[id], topic, langNote);
+            send('prototype', { id, html });
+          } catch (err) {
+            send('proto_error', { id, message: String(err) });
+          }
+        })
+      );
+
+      send('done', {});
+      controller.close();
+    },
   });
 
-  if (Object.keys(result).length === 0) {
-    return new Response(`Generation failed: ${errors.join(' | ')}`, { status: 500 });
-  }
-
-  return Response.json({ ...result, _errors: errors.length ? errors : undefined });
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+    },
+  });
 }

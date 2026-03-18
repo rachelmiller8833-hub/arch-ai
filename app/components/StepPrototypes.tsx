@@ -23,7 +23,7 @@ interface StepPrototypesProps {
   generatedConcepts: Record<string, ConceptData>;
   setGeneratedConcepts: (v: Record<string, ConceptData>) => void;
   generatedPrototypes: Record<string, string>;
-  setGeneratedPrototypes: (v: Record<string, string>) => void;
+  setGeneratedPrototypes: (v: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void;
   messages: Message[];
   onNewSession: () => void;
 }
@@ -123,18 +123,49 @@ export default function StepPrototypes({
         const errText = await response.text();
         throw new Error(errText || `HTTP ${response.status}`);
       }
-      const data = await response.json();
-      const { _errors, ...htmlMap } = data;
-      if (Object.keys(htmlMap).length === 0) throw new Error('No prototypes returned');
-      setGeneratedPrototypes(htmlMap);
-      if (_errors?.length) {
-        setGenerationError(`Partial failure — ${_errors.join(' | ')}`);
-        showToast(`${Object.keys(htmlMap).length}/${conceptCount} prototypes generated`);
+      if (!response.body) throw new Error('No response body');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      const errors: string[] = [];
+      let anySucceeded = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (value) buffer += decoder.decode(value, { stream: !done });
+
+        const blocks = buffer.split('\n\n');
+        buffer = done ? '' : (blocks.pop() || '');
+
+        for (const block of blocks) {
+          const eventMatch = block.match(/^event: (\w+)/);
+          const dataMatch  = block.match(/\ndata: (.+)/s);
+          if (!eventMatch || !dataMatch) continue;
+
+          let data: any;
+          try { data = JSON.parse(dataMatch[1]); } catch { continue; }
+
+          const event = eventMatch[1];
+          if (event === 'prototype') {
+            setGeneratedPrototypes(prev => ({ ...prev, [data.id]: data.html }));
+            anySucceeded = true;
+            setPhase('done'); // show cards as they arrive
+          } else if (event === 'proto_error') {
+            errors.push(`${data.id}: ${data.message}`);
+          } else if (event === 'done') {
+            if (errors.length) setGenerationError(`Some prototypes failed — ${errors.join(' | ')}`);
+            if (!anySucceeded) setPhase('reviewing');
+            return;
+          }
+        }
+
+        if (done) break;
       }
-      setPhase('done');
+
+      if (!anySucceeded) setPhase('reviewing');
     } catch (err) {
-      const msg = String(err);
-      setGenerationError(msg);
+      setGenerationError(String(err));
       setPhase('reviewing');
     }
   }

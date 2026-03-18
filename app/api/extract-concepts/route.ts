@@ -9,6 +9,8 @@ interface DebateMessage {
   text: string;
 }
 
+export const runtime = 'edge';
+
 export async function POST(request: Request) {
   const { topic, messages, lang = 'en', count = 3, apiKey } = await request.json();
   if (!apiKey) return new Response("No API key provided. Add your Anthropic key in Settings.", { status: 401 });
