@@ -209,6 +209,11 @@ export default function ProjectPage() {
   // Trigger demo if navigated here from landing page demo button
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    // Restore lang from landing page selection (normal navigation)
+    const savedLang = sessionStorage.getItem('archai_lang') as Lang | null;
+    if (savedLang) { setLang(savedLang); sessionStorage.removeItem('archai_lang'); }
+
     if (!sessionStorage.getItem('archai_demo')) return;
     const demoLang = (sessionStorage.getItem('archai_demo_lang') as Lang) || 'en';
     sessionStorage.removeItem('archai_demo');

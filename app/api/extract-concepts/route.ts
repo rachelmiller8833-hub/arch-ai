@@ -11,21 +11,22 @@ interface DebateMessage {
 
 export const runtime = 'edge';
 
-/** Extract the first complete JSON object from a string, stopping at the correct closing brace. */
+/** Extract the first complete JSON object from a string, stripping markdown fences first. */
 function extractFirstJson(text: string): string {
-  const start = text.indexOf('{');
+  const cleaned = text.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '');
+  const start = cleaned.indexOf('{');
   if (start === -1) throw new Error('No JSON found in response');
   let depth = 0;
   let inString = false;
   let escape = false;
-  for (let i = start; i < text.length; i++) {
-    const c = text[i];
+  for (let i = start; i < cleaned.length; i++) {
+    const c = cleaned[i];
     if (escape)          { escape = false; continue; }
     if (c === '\\' && inString) { escape = true; continue; }
     if (c === '"')       { inString = !inString; continue; }
     if (inString)        { continue; }
     if (c === '{')       { depth++; }
-    else if (c === '}')  { if (--depth === 0) return text.slice(start, i + 1); }
+    else if (c === '}')  { if (--depth === 0) return cleaned.slice(start, i + 1); }
   }
   throw new Error('No complete JSON object found in response');
 }
@@ -54,14 +55,7 @@ export async function POST(request: Request) {
     ? '...' + fullTranscript.slice(-6000)
     : fullTranscript;
 
-  try {
-    const response = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 1500,
-      messages: [
-        {
-          role: "user",
-          content: `You are a product strategist. Based on this debate about "${topic}", extract exactly ${conceptCount} distinct product directions that could be built.
+  const prompt = `You are a product strategist. Based on this debate about "${topic}", extract exactly ${conceptCount} distinct product directions that could be built.
 
 Each direction must be genuinely different in purpose, UX, and audience — not just visual variations of the same idea.${langNote}
 
@@ -78,22 +72,32 @@ Return ONLY valid JSON in this exact shape (no markdown, no explanation):
     "visual": "Key visual/layout idea — what it looks like."
   },
   "B": { "id": "B", ... }${conceptCount === 3 ? ',\n  "C": { "id": "C", ... }' : ''}
-}`,
-        },
-      ],
-    });
+}`;
 
-    const raw = response.content[0].type === "text" ? response.content[0].text : "";
-    const concepts: Record<string, ConceptData> = JSON.parse(extractFirstJson(raw));
+  const requiredIds = conceptCount === 2 ? (["A", "B"] as const) : (["A", "B", "C"] as const);
+  let lastErr: unknown;
 
-    const requiredIds = conceptCount === 2 ? (["A", "B"] as const) : (["A", "B", "C"] as const);
-    for (const id of requiredIds) {
-      if (!concepts[id]?.title) throw new Error(`Missing concept ${id}`);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await anthropic.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1500,
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const raw = response.content[0].type === "text" ? response.content[0].text : "";
+      const concepts: Record<string, ConceptData> = JSON.parse(extractFirstJson(raw));
+
+      for (const id of requiredIds) {
+        if (!concepts[id]?.title) throw new Error(`Missing concept ${id}`);
+      }
+
+      return Response.json(concepts);
+
+    } catch (err) {
+      lastErr = err;
     }
-
-    return Response.json(concepts);
-
-  } catch (err) {
-    return new Response(`Concept extraction failed: ${String(err)}`, { status: 500 });
   }
+
+  return new Response(`Concept extraction failed: ${String(lastErr)}`, { status: 500 });
 }

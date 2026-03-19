@@ -12,6 +12,9 @@ export default function LandingPage() {
   const isHe = lang === 'he';
 
   function goToProject() {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('archai_lang', lang);
+    }
     router.push('/project');
   }
 
