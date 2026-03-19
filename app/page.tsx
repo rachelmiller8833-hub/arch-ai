@@ -18,6 +18,7 @@ export default function LandingPage() {
   function goToDemo() {
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('archai_demo', '1');
+      sessionStorage.setItem('archai_demo_lang', lang);
     }
     router.push('/project');
   }

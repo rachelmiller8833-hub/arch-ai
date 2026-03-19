@@ -203,10 +203,24 @@ export default function ProjectPage() {
   // Trigger demo if navigated here from landing page demo button
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (sessionStorage.getItem('archai_demo')) {
-      sessionStorage.removeItem('archai_demo');
-      onDemoSkip();
-    }
+    if (!sessionStorage.getItem('archai_demo')) return;
+    const demoLang = (sessionStorage.getItem('archai_demo_lang') as Lang) || 'en';
+    sessionStorage.removeItem('archai_demo');
+    sessionStorage.removeItem('archai_demo_lang');
+    const demo = getDemoData(demoLang);
+    setLang(demoLang);
+    setTopic(demo.topic);
+    setMessages([]);
+    setCompletedCount(0);
+    setDebateComplete(false);
+    setIsStreaming(false);
+    setGeneratedConcepts(demo.concepts);
+    setGeneratedPrototypes(demo.prototypes);
+    setSelectedProto(null);
+    setContinueMessages([]);
+    setDemoReplayMessages(demo.messages);
+    setHistory(['input']);
+    setStep('debate');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
