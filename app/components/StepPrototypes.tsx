@@ -51,6 +51,7 @@ export default function StepPrototypes({
 
   // Determine initial phase based on existing state
   const initialPhase = (): Phase => {
+    if (selectedProto) return 'done'; // restored from history with a chosen prototype
     if (Object.keys(generatedPrototypes).length >= conceptCount) return 'done';
     if (Object.keys(generatedConcepts).length >= conceptCount) return 'reviewing';
     return 'extracting';
@@ -548,8 +549,11 @@ export default function StepPrototypes({
           <h2 className="text-2xl font-bold mb-2">
             {isHe ? `${conceptCount} אב-טיפוסים מוכנים` : `${conceptCount} Prototypes Ready`}
           </h2>
-          <p className={`text-sm ${subtle} mb-4`}>
+          <p className={`text-sm ${subtle} mb-2`}>
             {isHe ? 'פתח כל אחד לתצוגה מקדימה ובחר את הכיוון שאתה אוהב' : 'Open each to preview, then select the direction you want to refine'}
+          </p>
+          <p className={`text-xs mb-4 ${dm ? 'text-indigo-400' : 'text-indigo-500'}`}>
+            💾 {isHe ? 'בחירת אב-טיפוס תשמור אותו בהיסטוריה שלך' : 'Selecting a prototype saves it to your history'}
           </p>
           <button
             onClick={handleDownloadPRD}
