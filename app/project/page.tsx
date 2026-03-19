@@ -3,7 +3,8 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Step, Depth, Lang, ProtoId, Message, ConceptData } from '@/types/index';
+import { Step, Depth, Lang, ProtoId, Message, ConceptData, CustomConfig } from '@/types/index';
+import { AGENTS } from '@/lib/agents';
 import StepInput      from '@/app/components/StepInput';
 import StepDebate     from '@/app/components/StepDebate';
 import StepPrototypes from '@/app/components/StepPrototypes';
@@ -23,6 +24,11 @@ export default function ProjectPage() {
   const [depth, setDepth] = useState<Depth>('full');
   const [lang, setLang] = useState<Lang>('en');
   const [darkMode, setDarkMode] = useState(false);
+  const [customConfig, setCustomConfig] = useState<CustomConfig>({
+    agentModels: Object.fromEntries(AGENTS.map(a => [a.id, a.model])),
+    prototypeCount: 3,
+    agentCount: 8,
+  });
 
   // ---- Debate state ----
   const [messages, setMessages] = useState<Message[]>([]);
@@ -243,6 +249,8 @@ export default function ProjectPage() {
     onRestoreHistory,
     onDeleteHistory,
     onPrototypeHistoryUpdate,
+    // Custom mode
+    customConfig, setCustomConfig,
   };
 
   const debateProps = {
@@ -275,7 +283,7 @@ export default function ProjectPage() {
         <StepInput {...sharedProps} onStartDebate={onStartDebate} onDemoSkip={onDemoSkip} /* DEMO */ />
       )}
       {step === 'debate' && (
-        <StepDebate {...sharedProps} {...debateProps} onDebateHistorySave={onDebateHistorySave} />
+        <StepDebate {...sharedProps} {...debateProps} onDebateHistorySave={onDebateHistorySave} customConfig={customConfig} />
       )}
       {step === 'prototypes' && (
         <StepPrototypes {...sharedProps} messages={messages} />

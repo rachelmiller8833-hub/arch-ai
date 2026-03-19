@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Step, Depth, Lang, Message } from '@/types';
+import { Step, Depth, Lang, Message, CustomConfig } from '@/types';
 import SettingsModal from '@/app/components/SettingsModal';
 
 interface StepDebateProps {
@@ -35,6 +35,8 @@ interface StepDebateProps {
   onNewSession: () => void;
   // History
   onDebateHistorySave?: (messages: Message[]) => void;
+  // Custom mode
+  customConfig?: CustomConfig;
   // DEMO: pre-loaded messages for demo replay (skip API)
   demoReplayMessages?: Message[]; // DEMO
 }
@@ -79,6 +81,7 @@ export default function StepDebate({
   onNewSession,
   onDebateHistorySave,
   demoReplayMessages, // DEMO
+  customConfig,
 }: StepDebateProps) {
 
   const isHe = lang === 'he';
@@ -180,9 +183,11 @@ export default function StepDebate({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           topic, depth, lang,
-          apiKey:    settings.anthropicKey || undefined,
-          openaiKey: settings.openaiKey    || undefined,
-          geminiKey: settings.geminiKey    || undefined,
+          apiKey:         settings.anthropicKey || undefined,
+          openaiKey:      settings.openaiKey    || undefined,
+          geminiKey:      settings.geminiKey    || undefined,
+          agentModelOverrides: depth === 'custom' ? customConfig?.agentModels : undefined,
+          agentCount: depth === 'custom' ? (customConfig?.agentCount ?? 8) : undefined,
         }),
       });
 
@@ -385,7 +390,9 @@ export default function StepDebate({
     showToast('Export downloaded!');
   }
 
-  const agentCount = depth === 'mini' ? 3 : depth === 'quick' ? 4 : 8;
+  const agentCount = depth === 'custom'
+    ? (customConfig?.agentCount ?? 8)
+    : depth === 'mini' ? 3 : depth === 'quick' ? 4 : 8;
 
   return (
     <div dir={isHe ? 'rtl' : 'ltr'} className="min-h-screen flex flex-col">

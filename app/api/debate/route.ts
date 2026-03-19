@@ -99,7 +99,7 @@ function langInstruction(lang: string): string {
 
 // ---------- POST handler ----------
 export async function POST(request: Request) {
-  const { topic, depth, lang = 'en', apiKey, openaiKey, geminiKey } = await request.json();
+  const { topic, depth, lang = 'en', apiKey, openaiKey, geminiKey, agentModelOverrides, agentCount } = await request.json();
   if (!apiKey) return new Response("No API key provided. Add your Anthropic key in Settings.", { status: 401 });
   const anthropic = new Anthropic({ apiKey });
 
@@ -107,11 +107,17 @@ export async function POST(request: Request) {
     return new Response("Missing topic", { status: 400 });
   }
 
-  const agentCount = depth === "mini" ? 3 : depth === "quick" ? 4 : 8;
   const HAIKU = "claude-haiku-4-5-20251001" as const;
-  const agents = AGENTS.slice(0, agentCount).map(a =>
-    depth === "mini" ? { ...a, model: HAIKU } : a
-  );
+  let agents;
+  if (depth === "custom" && agentModelOverrides && typeof agentModelOverrides === "object") {
+    const count = agentCount === 4 ? 4 : 8;
+    agents = AGENTS.slice(0, count).map(a => ({ ...a, model: (agentModelOverrides as Record<string, string>)[a.id] ?? a.model }));
+  } else {
+    const agentCount = depth === "mini" ? 3 : depth === "quick" ? 4 : 8;
+    agents = AGENTS.slice(0, agentCount).map(a =>
+      depth === "mini" ? { ...a, model: HAIKU } : a
+    );
+  }
   const encoder = new TextEncoder();
   const previousMessages: PreviousMessage[] = [];
 

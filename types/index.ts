@@ -9,8 +9,14 @@ export interface ConceptData {
   ux: string;
   visual: string;
 }
-export type Depth = 'mini' | 'quick' | 'full';
+export type Depth = 'mini' | 'quick' | 'full' | 'custom';
 export type Lang = 'en' | 'he';
+
+export interface CustomConfig {
+  agentModels: Record<string, string>; // agent id → model id
+  prototypeCount: 1 | 2 | 3;
+  agentCount: 4 | 8;
+}
 export type ProtoId = 'A' | 'B' | 'C' | null;
 
 export interface Message {

@@ -3,8 +3,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Step, Depth, Lang } from '@/types';
+import { Step, Depth, Lang, CustomConfig } from '@/types';
 import { HistoryEntry, relativeDate } from '@/lib/history';
+import CustomModal from '@/app/components/CustomModal';
 
 interface StepInputProps {
   topic: string;
@@ -35,6 +36,9 @@ interface StepInputProps {
   historyEntries?: HistoryEntry[];
   onRestoreHistory?: (entry: HistoryEntry) => void;
   onDeleteHistory?: (id: string) => void;
+  // Custom mode
+  customConfig?: CustomConfig;
+  setCustomConfig?: (v: CustomConfig) => void;
 }
 
 
@@ -53,10 +57,13 @@ export default function StepInput({
   historyEntries = [],
   onRestoreHistory,
   onDeleteHistory,
+  customConfig,
+  setCustomConfig,
 }: StepInputProps) {
 
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
   const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
+  const [showCustomModal, setShowCustomModal] = useState(false);
   const isHe = lang === 'he';
   const router = useRouter();
 
@@ -439,53 +446,69 @@ export default function StepInput({
         })()}
 
         {/* Depth selector */}
-        {(() => {
-          const DEPTH_META: Record<Depth, { label: string; labelHe: string; tokens: string; cost: string; }> = {
-            mini:  { label: 'Mini',  labelHe: 'מיני',  tokens: '~14K tokens', cost: '~$0.15' },
-            quick: { label: 'Quick', labelHe: 'מהיר', tokens: '~25K tokens', cost: '~$0.30' },
-            full:  { label: 'Full',  labelHe: 'מלא',  tokens: '~45K tokens', cost: '~$0.40' },
-          };
-          const DEPTH_SUB: Record<Depth, { sub: string; subHe: string; }> = {
-            mini:  { sub: 'Haiku only · 2 designs', subHe: 'Haiku בלבד · 2 עיצובים' },
-            quick: { sub: '4 agents · 3 designs',   subHe: '4 סוכנים · 3 עיצובים'  },
-            full:  { sub: '8 agents · 3 designs',   subHe: '8 סוכנים · 3 עיצובים'  },
-          };
-          return (
-            <div className="mb-8">
-              <p className={`text-xs font-medium mb-2 ${subtle}`}>
-                {isHe ? 'עומק הדיון' : 'Discussion depth'}
-              </p>
-              <div className="flex gap-2">
-                {(['mini', 'quick', 'full'] as Depth[]).map(d => {
-                  const active = depth === d;
-                  const meta = DEPTH_META[d];
-                  const sub = DEPTH_SUB[d];
-                  return (
-                    <button
-                      key={d}
-                      onClick={() => setDepth(d)}
-                      className={`flex-1 py-2.5 px-2 rounded-xl border transition-all flex flex-col items-center gap-0.5 ${
-                        active
-                          ? 'bg-indigo-600 border-indigo-600 text-white'
-                          : dm
-                            ? 'border-slate-700 text-slate-400 hover:bg-slate-800'
-                            : 'border-slate-200 text-slate-500 hover:bg-slate-100'
-                      }`}
-                    >
-                      <span className="text-xs leading-tight">
-                        <span className="font-semibold">{isHe ? meta.labelHe : meta.label}</span>
-                        <span className={`font-normal ${active ? 'text-indigo-200' : subtle}`}> · {isHe ? sub.subHe : sub.sub}</span>
-                      </span>
-                      <span className={`text-[10px] font-mono ${active ? 'text-indigo-200' : dm ? 'text-slate-500' : 'text-slate-400'}`}>
-                        {meta.cost} · {meta.tokens}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })()}
+        <div className="mb-8">
+          <p className={`text-xs font-medium mb-2 ${subtle}`}>
+            {isHe ? 'עומק הדיון' : 'Discussion depth'}
+          </p>
+          <div className="flex gap-2">
+            {([
+              { d: 'mini',  label: 'Mini',  labelHe: 'מיני',  sub: '3 agents · Haiku',   subHe: '3 סוכנים · Haiku'  },
+              { d: 'quick', label: 'Quick', labelHe: 'מהיר', sub: '4 agents · 3 designs', subHe: '4 סוכנים · 3 עיצובים' },
+              { d: 'full',  label: 'Full',  labelHe: 'מלא',  sub: '8 agents · 3 designs', subHe: '8 סוכנים · 3 עיצובים' },
+            ] as const).map(({ d, label, labelHe, sub, subHe }) => {
+              const active = depth === d;
+              return (
+                <button
+                  key={d}
+                  onClick={() => setDepth(d)}
+                  className={`flex-1 py-2.5 px-2 rounded-xl border transition-all flex flex-col items-center gap-0.5 ${
+                    active
+                      ? 'bg-indigo-600 border-indigo-600 text-white'
+                      : dm
+                        ? 'border-slate-700 text-slate-400 hover:bg-slate-800'
+                        : 'border-slate-200 text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="text-xs font-semibold">{isHe ? labelHe : label}</span>
+                  <span className={`text-[10px] font-mono ${active ? 'text-indigo-200' : dm ? 'text-slate-500' : 'text-slate-400'}`}>
+                    {isHe ? subHe : sub}
+                  </span>
+                </button>
+              );
+            })}
+
+            {/* Custom button */}
+            <button
+              onClick={() => { setDepth('custom'); setShowCustomModal(true); }}
+              className={`flex-1 py-2.5 px-2 rounded-xl border transition-all flex flex-col items-center gap-0.5 ${
+                depth === 'custom'
+                  ? 'bg-indigo-600 border-indigo-600 text-white'
+                  : dm
+                    ? 'border-slate-700 text-slate-400 hover:bg-slate-800'
+                    : 'border-slate-200 text-slate-500 hover:bg-slate-100'
+              }`}
+            >
+              <span className="text-xs font-semibold">{isHe ? 'מותאם ⚙' : 'Custom ⚙'}</span>
+              <span className={`text-[10px] font-mono ${depth === 'custom' ? 'text-indigo-200' : dm ? 'text-slate-500' : 'text-slate-400'}`}>
+                {depth === 'custom'
+                  ? `${customConfig?.agentCount ?? 8} agents · ${customConfig?.prototypeCount ?? 3} proto`
+                  : (isHe ? 'הגדרה עצמית' : 'configure')}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Custom mode modal */}
+        {customConfig && setCustomConfig && (
+          <CustomModal
+            show={showCustomModal}
+            onClose={() => setShowCustomModal(false)}
+            onApply={cfg => { setCustomConfig(cfg); setShowCustomModal(false); }}
+            initial={customConfig}
+            darkMode={darkMode}
+            lang={lang}
+          />
+        )}
 
         {/* Start button */}
         <button
