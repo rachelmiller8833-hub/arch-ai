@@ -45,15 +45,19 @@ export async function POST(request: Request) {
     ? '\nIMPORTANT: Write all title, description, ux, and visual fields entirely in Hebrew (עברית).'
     : '';
 
-  const transcript = (messages as DebateMessage[])
+  const fullTranscript = (messages as DebateMessage[])
     .filter(m => m.text.trim())
     .map(m => `${m.name} (${m.role}): ${m.text}`)
     .join("\n\n");
+  // Keep prompt manageable — last ~6000 chars covers the most relevant discussion
+  const transcript = fullTranscript.length > 6000
+    ? '...' + fullTranscript.slice(-6000)
+    : fullTranscript;
 
   try {
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 800,
+      max_tokens: 1500,
       messages: [
         {
           role: "user",
