@@ -2,6 +2,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Step, Depth, Lang } from '@/types';
 import { HistoryEntry, relativeDate } from '@/lib/history';
 
@@ -62,6 +63,7 @@ export default function StepInput({
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
   const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
   const isHe = lang === 'he';
+  const router = useRouter();
 
   // Start the debate — reset state and navigate
   function handleStart() {
@@ -219,18 +221,26 @@ export default function StepInput({
 
       {/* ---- Top Nav ---- */}
       <nav className={`sticky top-0 z-40 border-b ${dm ? 'bg-slate-900 border-slate-700/50' : 'bg-white border-slate-200'}`}>
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+        <div className="w-full px-6 h-14 flex items-center justify-between gap-4">
 
-          {/* Logo */}
-          <button onClick={onNewSession} className="flex items-center gap-2 cursor-pointer">
-            <div className="w-7 h-7 rounded-md bg-indigo-600 flex items-center justify-center">
-              <span className="text-white text-xs font-bold font-mono">A</span>
-            </div>
-            <span className="font-bold text-sm tracking-tight">ArchAI</span>
-            <span className={`hidden sm:block text-xs ml-1 ${subtle}`}>
-              {isHe ? 'סיעור מוחות ארכיטקטורה עם AI' : 'AI Architecture Brainstorming'}
-            </span>
-          </button>
+          {/* Logo + back link */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push('/')}
+              className={`text-xs px-2 py-1 rounded-md transition-colors ${dm ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              ← {isHe ? 'חזרה' : 'Back'}
+            </button>
+            <button onClick={onNewSession} className="flex items-center gap-2 cursor-pointer">
+              <div className="w-7 h-7 rounded-md bg-indigo-600 flex items-center justify-center">
+                <span className="text-white text-xs font-bold font-mono">A</span>
+              </div>
+              <span className="font-bold text-sm tracking-tight">ArchAI</span>
+              <span className={`hidden sm:block text-xs ml-1 ${subtle}`}>
+                {isHe ? 'סיעור מוחות ארכיטקטורה עם AI' : 'AI Architecture Brainstorming'}
+              </span>
+            </button>
+          </div>
 
           {/* Nav actions */}
           <div className="flex items-center gap-2">
@@ -510,27 +520,6 @@ export default function StepInput({
         >
           {isHe ? 'התחל דיון ←' : 'Start Discussion →'}
         </button>
-
-        {/* TO_BE_REMOVED: Demo button — replays full retro games debate then loads pre-built prototypes */}
-        {onDemoSkip && ( // TO_BE_REMOVED
-          <div className={`mt-4 pt-4 border-t text-center ${dm ? 'border-slate-800' : 'border-slate-100'}`}> {/* TO_BE_REMOVED */}
-            <p className={`text-xs mb-2 ${subtle}`}> {/* TO_BE_REMOVED */}
-              No API key? Watch a full live demo: {/* TO_BE_REMOVED */}
-            </p> {/* TO_BE_REMOVED */}
-            <button // TO_BE_REMOVED
-              onClick={onDemoSkip} // TO_BE_REMOVED
-              className={`inline-flex items-center gap-2 text-sm px-5 py-2.5 rounded-xl border font-medium transition-colors ${dm ? 'border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400' : 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100 text-indigo-600'}`} // TO_BE_REMOVED
-            > {/* TO_BE_REMOVED */}
-              ⚡ Watch Demo — Retro Games Site {/* TO_BE_REMOVED */}
-            </button> {/* TO_BE_REMOVED */}
-            <p className={`text-xs mt-2 ${subtle}`}>Replays the full 8-agent debate, then shows 3 ready-made prototypes</p> {/* TO_BE_REMOVED */}
-          </div> // TO_BE_REMOVED
-        )} {/* TO_BE_REMOVED */}
-
-        {/* Powered by */}
-        <p className={`text-center text-xs mt-6 ${subtle}`}>
-          Powered by Claude Opus 4.6 · Sonnet 4.6 · Haiku 4.5 · GPT-5.4 · Gemini 2.5 Pro
-        </p>
 
         </> /* end activeTab === 'new' */}
       </main>
