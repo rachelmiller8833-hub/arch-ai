@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { Step, Depth, Lang } from '@/types';
+import { HistoryEntry, relativeDate } from '@/lib/history';
 
 interface StepInputProps {
   topic: string;
@@ -29,6 +30,10 @@ interface StepInputProps {
   onNewSession: () => void;
   onStartDebate: () => void;
   onDemoSkip?: () => void; // TO_BE_REMOVED
+  // History
+  historyEntries?: HistoryEntry[];
+  onRestoreHistory?: (entry: HistoryEntry) => void;
+  onDeleteHistory?: (id: string) => void;
 }
 
 // Template ideas shown as quick-fill buttons
@@ -49,9 +54,13 @@ export default function StepInput({
   onNewSession,
   onStartDebate,
   onDemoSkip, // TO_BE_REMOVED
+  historyEntries = [],
+  onRestoreHistory,
+  onDeleteHistory,
 }: StepInputProps) {
 
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
+  const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
   const isHe = lang === 'he';
 
   // Start the debate — reset state and navigate
@@ -225,6 +234,29 @@ export default function StepInput({
 
           {/* Nav actions */}
           <div className="flex items-center gap-2">
+            {/* Tab switcher */}
+            <div className={`flex rounded-lg border overflow-hidden ${dm ? 'border-slate-700' : 'border-slate-200'}`}>
+              <button
+                onClick={() => setActiveTab('new')}
+                className={`text-xs px-3 py-1.5 transition-colors ${
+                  activeTab === 'new'
+                    ? 'bg-indigo-600 text-white'
+                    : dm ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+                }`}
+              >
+                {isHe ? '+ חדש' : '+ New'}
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`text-xs px-3 py-1.5 transition-colors border-l ${
+                  activeTab === 'history'
+                    ? 'bg-indigo-600 text-white'
+                    : dm ? 'border-slate-700 hover:bg-slate-800 text-slate-400' : 'border-slate-200 hover:bg-slate-100 text-slate-500'
+                }`}
+              >
+                {isHe ? `היסטוריה (${historyEntries.length})` : `History (${historyEntries.length})`}
+              </button>
+            </div>
             <button
               onClick={() => setLang(isHe ? 'en' : 'he')}
               className={`text-xs px-3 py-1.5 rounded-md border ${dm ? 'border-slate-700 hover:bg-slate-800 text-slate-400' : 'border-slate-200 hover:bg-slate-100 text-slate-500'}`}
@@ -266,6 +298,98 @@ export default function StepInput({
       {/* ---- Main content ---- */}
       <main className="max-w-3xl mx-auto px-4 py-12">
 
+        {/* ---- History tab ---- */}
+        {activeTab === 'history' && (
+          <div>
+            <h2 className="text-xl font-bold mb-6">
+              {isHe ? 'פרוייקטים אחרונים' : 'Recent Projects'}
+            </h2>
+            {historyEntries.length === 0 ? (
+              <div className={`text-center py-16 ${subtle}`}>
+                <div className="text-4xl mb-3">📭</div>
+                <p className="text-sm">{isHe ? 'אין היסטוריה עדיין' : 'No history yet'}</p>
+                <button
+                  onClick={() => setActiveTab('new')}
+                  className="mt-4 text-sm text-indigo-500 hover:underline"
+                >
+                  {isHe ? 'התחל פרוייקט חדש ←' : 'Start a new project →'}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {historyEntries.map(entry => {
+                  const conceptKeys = (['A', 'B', 'C'] as const).filter(k => entry.concepts[k]);
+                  const depthLabel = entry.depth === 'mini' ? 'Mini' : entry.depth === 'quick' ? 'Quick' : 'Full';
+                  const hasProto = !!entry.selectedProto;
+                  return (
+                    <div
+                      key={entry.id}
+                      className={`rounded-xl border p-4 transition-colors ${card}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          {/* Topic */}
+                          <p className="font-semibold text-sm leading-snug line-clamp-2 mb-2">
+                            {entry.topic}
+                          </p>
+                          {/* Badges row */}
+                          <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${dm ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                              {relativeDate(entry.savedAt)}
+                            </span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${dm ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                              {entry.lang.toUpperCase()}
+                            </span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${dm ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                              {depthLabel}
+                            </span>
+                            {hasProto && (
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full ${dm ? 'bg-indigo-900/50 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
+                                ✓ Prototype {entry.selectedProto}
+                              </span>
+                            )}
+                          </div>
+                          {/* Concept pills */}
+                          {conceptKeys.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {conceptKeys.map(k => (
+                                <span
+                                  key={k}
+                                  className={`text-[10px] px-2 py-0.5 rounded-full border ${dm ? 'border-slate-700 text-slate-400' : 'border-slate-200 text-slate-500'}`}
+                                >
+                                  {k}: {entry.concepts[k].title}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {/* Actions */}
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <button
+                            onClick={() => onRestoreHistory?.(entry)}
+                            className="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium whitespace-nowrap"
+                          >
+                            {isHe ? 'המשך ←' : 'Continue →'}
+                          </button>
+                          <button
+                            onClick={() => onDeleteHistory?.(entry.id)}
+                            className={`text-xs px-2 py-1 rounded-lg ${dm ? 'hover:bg-slate-800 text-slate-500' : 'hover:bg-slate-100 text-slate-400'}`}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ---- New Project tab ---- */}
+        {activeTab === 'new' && <>
+
         {/* Header */}
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold mb-3">
@@ -295,7 +419,7 @@ export default function StepInput({
 
         {/* Topic textarea */}
         {(() => {
-          const maxChars = isHe ? 150 : 300;
+          const maxChars = isHe ? 250 : 500;
           const remaining = maxChars - topic.length;
           const pct = topic.length / maxChars;
           const counterColor = pct >= 1
@@ -407,6 +531,8 @@ export default function StepInput({
         <p className={`text-center text-xs mt-6 ${subtle}`}>
           Powered by Claude Opus 4.6 · Sonnet 4.6 · Haiku 4.5 · GPT-5.4 · Gemini 2.5 Pro
         </p>
+
+        </> /* end activeTab === 'new' */}
       </main>
     </div>
   );

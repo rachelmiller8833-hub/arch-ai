@@ -26,6 +26,7 @@ interface StepPrototypesProps {
   setGeneratedPrototypes: (v: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void;
   messages: Message[];
   onNewSession: () => void;
+  onPrototypeHistoryUpdate?: (protoId: ProtoId, html: string, concepts: Record<string, ConceptData>) => void;
 }
 
 type Phase = 'extracting' | 'reviewing' | 'generating' | 'done';
@@ -40,6 +41,7 @@ export default function StepPrototypes({
   generatedPrototypes, setGeneratedPrototypes,
   messages,
   onNewSession,
+  onPrototypeHistoryUpdate,
 }: StepPrototypesProps) {
 
   const isHe = lang === 'he';
@@ -201,6 +203,7 @@ export default function StepPrototypes({
   function handleSelect(id: ProtoId) {
     if (!id) return;
     setSelectedProto(id);
+    onPrototypeHistoryUpdate?.(id, generatedPrototypes[id] || '', generatedConcepts);
     navigateTo('continue');
   }
 

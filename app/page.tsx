@@ -7,7 +7,8 @@ import StepInput      from '@/app/components/StepInput';
 import StepDebate     from '@/app/components/StepDebate';
 import StepPrototypes from '@/app/components/StepPrototypes';
 import StepContinue   from '@/app/components/StepContinue';
-import { getDemoData } from '@/lib/demoData'; 
+import { getDemoData } from '@/lib/demoData';
+import { HistoryEntry, loadHistory, upsertEntry, deleteEntry } from '@/lib/history';
 
 // pre-fill topic for testing. Delete this line before shipping.
 const DEV_PREFILL_TOPIC = 'Logo builder SaaS — AI-powered logo creation tool';
@@ -35,6 +36,13 @@ export default function Home() {
 
   // ---- Continue (round 2+) state ----
   const [continueMessages, setContinueMessages] = useState<Message[]>([]);
+
+  // ---- History ----
+  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>(() => {
+    if (typeof window === 'undefined') return [];
+    return loadHistory();
+  });
+  const [currentHistoryId, setCurrentHistoryId] = useState('');
 
   const [demoReplayMessages, setDemoReplayMessages] = useState<Message[]>([]); 
 
@@ -94,6 +102,8 @@ export default function Home() {
 
   // Reset debate state and navigate to debate (called when starting a new debate from input)
   const onStartDebate = useCallback(() => {
+    const newId = Date.now().toString();
+    setCurrentHistoryId(newId);
     setMessages([]);
     setCompletedCount(0);
     setDebateComplete(false);
@@ -106,6 +116,58 @@ export default function Home() {
     setHistory(prev => [...prev, step]);
     setStep('debate');
   }, [step]);
+
+  // Save debate transcript to history (called by StepDebate when debate completes)
+  const onDebateHistorySave = useCallback((msgs: Message[]) => {
+    if (!currentHistoryId || !topic) return;
+    const entry: HistoryEntry = {
+      id: currentHistoryId,
+      savedAt: Date.now(),
+      topic, lang, depth,
+      messages: msgs,
+      concepts: {},
+      selectedProto: null,
+      selectedHtml: null,
+    };
+    upsertEntry(entry);
+    setHistoryEntries(loadHistory());
+  }, [currentHistoryId, topic, lang, depth]);
+
+  // Update history entry when user selects a prototype
+  const onPrototypeHistoryUpdate = useCallback((protoId: ProtoId, html: string, concepts: Record<string, ConceptData>) => {
+    if (!currentHistoryId || !protoId) return;
+    const entries = loadHistory();
+    const existing = entries.find(e => e.id === currentHistoryId);
+    if (!existing) return;
+    upsertEntry({ ...existing, concepts, selectedProto: protoId, selectedHtml: html, savedAt: Date.now() });
+    setHistoryEntries(loadHistory());
+  }, [currentHistoryId]);
+
+  // Restore a past session from history
+  const onRestoreHistory = useCallback((entry: HistoryEntry) => {
+    setTopic(entry.topic);
+    setLang(entry.lang);
+    setDepth(entry.depth);
+    setMessages(entry.messages.map(m => ({ ...m, streaming: false })));
+    setCompletedCount(entry.messages.filter(m => !m.isConclusion).length);
+    setDebateComplete(entry.messages.length > 0);
+    setIsStreaming(false);
+    setGeneratedConcepts(entry.concepts);
+    const protos: Record<string, string> = {};
+    if (entry.selectedProto && entry.selectedHtml) protos[entry.selectedProto] = entry.selectedHtml;
+    setGeneratedPrototypes(protos);
+    setSelectedProto(entry.selectedProto);
+    setContinueMessages([]);
+    setCurrentHistoryId(entry.id);
+    setHistory(['input']);
+    setStep('prototypes');
+  }, []);
+
+  // Delete a history entry
+  const onDeleteHistory = useCallback((id: string) => {
+    deleteEntry(id);
+    setHistoryEntries(prev => prev.filter(e => e.id !== id));
+  }, []);
 
   const showToast = useCallback((msg: string) => {
     setToastMsg(msg);
@@ -144,6 +206,11 @@ export default function Home() {
     generatedConcepts, setGeneratedConcepts,
     generatedPrototypes, setGeneratedPrototypes,
     onNewSession,
+    // History
+    historyEntries,
+    onRestoreHistory,
+    onDeleteHistory,
+    onPrototypeHistoryUpdate,
   };
 
   const debateProps = {
@@ -176,7 +243,7 @@ export default function Home() {
         <StepInput {...sharedProps} onStartDebate={onStartDebate} onDemoSkip={onDemoSkip} /* DEMO: onDemoSkip */ />
       )}
       {step === 'debate' && (
-        <StepDebate {...sharedProps} {...debateProps} />
+        <StepDebate {...sharedProps} {...debateProps} onDebateHistorySave={onDebateHistorySave} />
       )}
       {step === 'prototypes' && (
         <StepPrototypes {...sharedProps} messages={messages} />

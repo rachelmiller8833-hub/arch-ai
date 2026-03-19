@@ -33,6 +33,8 @@ interface StepDebateProps {
   setSettings: (v: any) => void;
   // New session
   onNewSession: () => void;
+  // History
+  onDebateHistorySave?: (messages: Message[]) => void;
   // DEMO: pre-loaded messages for demo replay (skip API)
   demoReplayMessages?: Message[]; // DEMO
 }
@@ -75,6 +77,7 @@ export default function StepDebate({
   showSettings, setShowSettings,
   settings, setSettings,
   onNewSession,
+  onDebateHistorySave,
   demoReplayMessages, // DEMO
 }: StepDebateProps) {
 
@@ -302,8 +305,9 @@ export default function StepDebate({
         setTypingVisible(false);
         setMessages(prev => {
           const last = prev[prev.length - 1];
-          if (!last) return prev;
-          return [...prev.slice(0, -1), { ...last, streaming: false }];
+          const finalMessages = last ? [...prev.slice(0, -1), { ...last, streaming: false }] : prev;
+          onDebateHistorySave?.(finalMessages);
+          return finalMessages;
         });
         setDebateComplete(true);
         setIsStreaming(false);
