@@ -37,11 +37,6 @@ interface StepInputProps {
   onDeleteHistory?: (id: string) => void;
 }
 
-// Template ideas shown as quick-fill buttons
-const TEMPLATES = {
-  en: ['SaaS Dashboard Tool', 'AI Coding Assistant', 'Marketplace Platform'],
-  he: ['לוח SaaS', 'עוזר AI לקוד', 'פלטפורמת מרקטפלייס'],
-};
 
 export default function StepInput({
   topic, setTopic,
@@ -69,11 +64,6 @@ export default function StepInput({
   function handleStart() {
     if (!topic.trim()) return;
     onStartDebate();
-  }
-
-  // Fill the topic input with a template
-  function handleTemplate(t: string) {
-    setTopic(t);
   }
 
   function saveSettings() {
@@ -306,7 +296,7 @@ export default function StepInput({
       </div>
 
       {/* ---- Main content ---- */}
-      <main className="max-w-3xl mx-auto px-4 py-12">
+      <main className="max-w-2xl mx-auto px-6 pt-32 pb-12">
 
         {/* ---- History tab ---- */}
         {activeTab === 'history' && (
@@ -408,23 +398,8 @@ export default function StepInput({
           <p className={`text-sm ${subtle}`}>
             {isHe
               ? 'תאר את הרעיון שלך — 8 מהנדסי AI ינתחו אותו'
-              : 'Describe your idea — 8 AI engineers will analyze it'}
+              : 'Describe your idea — AI engineers will analyze it'}
           </p>
-        </div>
-
-        {/* Template buttons */}
-        <div className="flex flex-wrap gap-2 justify-center mb-6">
-          {TEMPLATES[lang].map(t => (
-            <button
-              key={t}
-              onClick={() => handleTemplate(t)}
-              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                dm
-                  ? 'border-slate-700 hover:bg-slate-800 text-slate-400'
-                  : 'border-slate-200 hover:bg-slate-100 text-slate-500'
-              }`}
-            >{t}</button>
-          ))}
         </div>
 
         {/* Topic textarea */}

@@ -373,7 +373,7 @@ export default function StepPrototypes({
     return (
       <div dir={isHe ? 'rtl' : 'ltr'} className="min-h-screen flex flex-col">
         <Nav />
-        <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-10">
+        <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-10">
           <div className="text-center mb-10">
             <h2 className="text-2xl font-bold mb-2">
               {isHe ? `${conceptCount} כיוונים מוצרים` : `${conceptCount} Product Directions`}
@@ -537,7 +537,7 @@ export default function StepPrototypes({
   return (
     <div dir={isHe ? 'rtl' : 'ltr'} className="min-h-screen flex flex-col">
       <Nav />
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-10">
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-10">
         {generationError && (
           <div className={`mb-6 p-4 rounded-xl border text-sm ${dm ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-700'}`}>
             <p className="font-semibold mb-1">Partial generation</p>

@@ -452,7 +452,7 @@ export default function StepContinue({
       )}
 
       {/* ---- Chat thread ---- */}
-      <main className="flex-1 max-w-3xl mx-auto w-full px-4 py-6">
+      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-6">
 
         {/* Header */}
         <div className="mb-8">
@@ -499,7 +499,7 @@ export default function StepContinue({
       {/* ---- Generate refined HTML panel ---- */}
       {continueMessages.length > 0 && !isRunning && (
         <div className={`border-t px-4 py-3 ${dm ? 'bg-slate-900 border-slate-700/50' : 'bg-white border-slate-100'}`}>
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-2xl mx-auto">
             {refinedHtml ? (
               <div className={`flex items-center gap-3 p-3 rounded-xl border ${dm ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-emerald-200 bg-emerald-50'}`}>
                 <span className="text-emerald-500 text-sm font-semibold flex-1">
@@ -550,7 +550,7 @@ export default function StepContinue({
 
       {/* ---- Input bar — sticky at bottom ---- */}
       <div className={`sticky bottom-0 border-t ${dm ? 'bg-slate-900 border-slate-700/50' : 'bg-white border-slate-200'}`}>
-        <div className="max-w-3xl mx-auto px-4 py-4">
+        <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex gap-3">
             <textarea
               value={input}

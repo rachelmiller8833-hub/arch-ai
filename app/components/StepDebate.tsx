@@ -469,7 +469,7 @@ export default function StepDebate({
       </div>
 
       {/* ---- Chat thread ---- */}
-      <main className="flex-1 max-w-3xl mx-auto w-full px-4 py-6">
+      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-6">
         <div id="chat-container" className="space-y-6">
 
           {messages.map((msg, i) => (
@@ -563,8 +563,8 @@ export default function StepDebate({
             </div>
           )}
 
-          {/* Stopped early — block prototypes, offer restart */}
-          {!isStreaming && !debateComplete && !invalidTopic && messages.length > 0 && (
+          {/* Stopped early — block prototypes, offer restart (hidden during demo) */}
+          {!isStreaming && !debateComplete && !invalidTopic && messages.length > 0 && !demoReplayMessages?.length && (
             <div className="text-center pt-4 pb-2 space-y-2">
               <p className={`text-xs ${subtle}`}>
                 {isHe ? 'הדיון הופסק — הפעל מחדש כדי ליצור אב-טיפוסים' : 'Debate stopped — restart to generate prototypes'}
