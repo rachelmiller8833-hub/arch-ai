@@ -29,7 +29,7 @@ interface StepDebateProps {
   // Settings
   showSettings: boolean;
   setShowSettings: (v: boolean) => void;
-  settings: { anthropicKey: string; openaiKey: string; geminiKey: string; maxSessions: number; expiryDate: string; };
+  settings: { anthropicKey: string; openaiKey: string; geminiKey: string; };
   setSettings: (v: any) => void;
   // New session
   onNewSession: () => void;

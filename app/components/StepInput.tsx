@@ -22,8 +22,6 @@ interface StepInputProps {
     anthropicKey: string;
     openaiKey: string;
     geminiKey: string;
-    maxSessions: number;
-    expiryDate: string;
   };
   setSettings: (v: any) => void;
   navigateTo: (target: Step) => void;
@@ -124,7 +122,8 @@ export default function StepInput({
                   {/* Anthropic */}
                   <div>
                     <label className={`text-xs font-medium mb-1 block ${subtle}`}>
-                      Anthropic API Key
+                      Anthropic API Key <span className="text-red-500">*</span>
+                      <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" className="ml-2 text-indigo-500 hover:underline font-normal">Get key →</a>
                     </label>
                     <div className="flex gap-2">
                       <input
@@ -147,6 +146,7 @@ export default function StepInput({
                   <div>
                     <label className={`text-xs font-medium mb-1 block ${subtle}`}>
                       OpenAI API Key
+                      <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="ml-2 text-indigo-500 hover:underline font-normal">Get key →</a>
                     </label>
                     <input
                       type="password"
@@ -161,6 +161,7 @@ export default function StepInput({
                   <div>
                     <label className={`text-xs font-medium mb-1 block ${subtle}`}>
                       Gemini API Key
+                      <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="ml-2 text-indigo-500 hover:underline font-normal">Get key →</a>
                     </label>
                     <input
                       type="password"
@@ -173,32 +174,6 @@ export default function StepInput({
                 </div>
               </div>
 
-              <hr className={dm ? 'border-slate-700' : 'border-slate-200'} />
-
-              {/* Usage limits */}
-              <div>
-                <h3 className="text-sm font-semibold mb-3">Usage Limits</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className={`text-xs font-medium mb-1 block ${subtle}`}>Max Sessions</label>
-                    <input
-                      type="number"
-                      value={settings.maxSessions}
-                      onChange={e => setSettings({ ...settings, maxSessions: Number(e.target.value) })}
-                      className={`w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 ${input}`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`text-xs font-medium mb-1 block ${subtle}`}>Expiry Date</label>
-                    <input
-                      type="date"
-                      value={settings.expiryDate}
-                      onChange={e => setSettings({ ...settings, expiryDate: e.target.value })}
-                      className={`w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 ${input}`}
-                    />
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Modal footer */}

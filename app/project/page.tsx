@@ -58,11 +58,11 @@ export default function ProjectPage() {
   // ---- Settings (persisted to localStorage) ----
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState(() => {
-    if (typeof window === 'undefined') return { anthropicKey: '', openaiKey: '', geminiKey: '', maxSessions: 50, expiryDate: '' };
+    if (typeof window === 'undefined') return { anthropicKey: '', openaiKey: '', geminiKey: '' };
     try {
       const saved = localStorage.getItem('archai_settings');
-      return saved ? JSON.parse(saved) : { anthropicKey: '', openaiKey: '', geminiKey: '', maxSessions: 50, expiryDate: '' };
-    } catch { return { anthropicKey: '', openaiKey: '', geminiKey: '', maxSessions: 50, expiryDate: '' }; }
+      return saved ? JSON.parse(saved) : { anthropicKey: '', openaiKey: '', geminiKey: '' };
+    } catch { return { anthropicKey: '', openaiKey: '', geminiKey: '' }; }
   });
 
   function setSettingsAndPersist(v: any) {

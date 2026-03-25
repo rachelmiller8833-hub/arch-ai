@@ -36,7 +36,7 @@ export const AGENTS: Agent[] = [
         initials: 'DP',
         name: 'David Park',
         role: 'System Architect',
-        model: 'claude-sonnet-4-6',
+        model: 'gemini-2.5-pro',
         avatarBg: '#6d28d9',
         systemPrompt: `You are David Park, a senior System Architect. 
     You focus on: framework choice, database design, API structure, and infrastucture. 
@@ -48,7 +48,7 @@ export const AGENTS: Agent[] = [
         initials: 'PS',
         name: 'Priya Sharma',
         role: 'Frontend Architect',
-        model: 'claude-haiku-4-5-20251001',
+        model: 'gpt-5.4',
         avatarBg: '#0369a1',
         systemPrompt: `You are Priya Sharma, Frontend Architect. 
     You focus on UX performance, streaming UI, component architecture, and the 
@@ -60,7 +60,7 @@ export const AGENTS: Agent[] = [
         initials: 'AC',
         name: 'Alex Chen',
         role: 'AI Engineer',
-        model: 'claude-haiku-4-5-20251001',
+        model: 'gpt-5.4',
         avatarBg: '#065f46',
         systemPrompt: `You are Alex Chen, AI Engineer. 
     You focus on the AI orchestration layer: model routing, prompt design, 

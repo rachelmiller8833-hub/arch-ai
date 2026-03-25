@@ -4,7 +4,6 @@ import Anthropic from "@anthropic-ai/sdk";
 import { ConceptData } from "@/types";
 
 export const runtime = 'edge';
-export const maxDuration = 60;
 
 interface RefinementMessage {
   name: string;
