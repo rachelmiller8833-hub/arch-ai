@@ -39,55 +39,94 @@ export async function POST(request: Request) {
       }`
     : '';
 
+  const navScript = `<script>
+function showScreen(id){
+  document.querySelectorAll('[id^="screen-"]').forEach(function(s){s.style.display='none';});
+  var el=document.getElementById(id);if(el)el.style.display='block';
+  document.querySelectorAll('[data-screen]').forEach(function(e){
+    var on=e.dataset.screen===id;
+    e.style.opacity=on?'1':'0.65';
+    e.style.fontWeight=on?'700':'400';
+    if(e.dataset.activebg){e.style.background=on?e.dataset.activebg:'transparent';}
+  });
+}
+function showTab(cId,tId){
+  var c=document.getElementById(cId);if(!c)return;
+  c.querySelectorAll('[id^="tab-"]').forEach(function(t){t.style.display='none';});
+  var t=document.getElementById(tId);if(t)t.style.display='block';
+}
+function toggleModal(id){
+  var el=document.getElementById(id);if(!el)return;
+  el.style.display=el.style.display==='flex'?'none':'flex';
+}
+function submitForm(formId,successId){
+  var f=document.getElementById(formId);var s=document.getElementById(successId);
+  if(f)f.style.display='none';if(s)s.style.display='block';
+}
+<\/script>`;
+
   try {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 6000,
+      max_tokens: 10000,
       messages: [
         {
           role: "user",
-          content: `Build a complete, beautiful, self-contained HTML prototype for this refined product:
+          content: `You are filling content into a mandatory HTML app skeleton for a refined product.
 
-Product name: ${concept.title}
-What it is: ${concept.description}
+Product: ${concept.title} — ${concept.description}
 UX direction: ${concept.ux}
-Visual/layout: ${concept.visual}
+Visual style: ${concept.visual}
 Topic area: ${topic}${refinementContext}
 
-CRITICAL RULES — read carefully:
-1. Use INLINE styles (style="...") on every element. NO <style> tag anywhere.
-2. Use real, realistic content for "${topic}" — not placeholder text.
-3. Include: navigation bar, hero section, at least 2 feature sections, footer.
-4. Make it look like a real launched product (polished, not a wireframe).
-5. Incorporate the refinements from the discussion above into the design.
-6. Use Google Fonts via a single <link> tag in <head> if needed.
-7. No other external dependencies.
-8. Return ONLY the HTML. Start with <!DOCTYPE html>. No markdown, no explanation.
+━━━ MANDATORY SKELETON — output this structure exactly ━━━
 
-MULTI-SCREEN NAVIGATION — you MUST implement all navigation this way:
-- Every distinct screen/page is a <div> with a unique id, e.g. id="screen-home", id="screen-dashboard"
-- Only the first screen starts visible (style="display:block"); all others start hidden (style="display:none")
-- Every nav link, menu item, tab, or button that switches screens must call: showScreen('screen-id')
-- Place this function in a <script> tag at the bottom of <body>:
-    function showScreen(id) {
-      document.querySelectorAll('[id^="screen-"]').forEach(function(s){ s.style.display='none'; });
-      document.getElementById(id).style.display='block';
-      document.querySelectorAll('[data-screen]').forEach(function(el){ el.style.opacity = el.dataset.screen===id?'1':'0.5'; });
-    }
-    function showTab(containerId, tabId) {
-      var c = document.getElementById(containerId);
-      c.querySelectorAll('[id^="tab-"]').forEach(function(t){ t.style.display='none'; });
-      document.getElementById(tabId).style.display='block';
-    }
-    function toggleModal(id) {
-      var el = document.getElementById(id);
-      el.style.display = el.style.display==='none'?'flex':'none';
-    }
-- Add data-screen="screen-id" to nav links so the active state highlights correctly
-- For tabs within a screen: use showTab(containerId, tabId)
-- For modals/drawers: pre-render them hidden (display:none), toggle with toggleModal(id)
-- For forms: show a success message div (pre-rendered, hidden) and hide the form on submit
-- EVERY clickable element must have an onclick that calls one of the above functions${langNote}`,
+<!DOCTYPE html>
+<html>
+<head>
+<title>[product name]</title>
+[one Google Fonts <link> if needed — no other external resources]
+</head>
+<body style="margin:0;padding:0;font-family:[chosen font],sans-serif;background:[bg color]">
+
+<!-- ── FIXED NAV BAR ── -->
+<nav style="position:fixed;top:0;left:0;right:0;z-index:100;[your nav styles]">
+  <div style="[logo area styles]">[logo/brand]</div>
+  <div style="display:flex;gap:8px;align-items:center">
+    [one <button> per screen — each MUST have onclick="showScreen('screen-NAME')" and data-screen="screen-NAME"]
+    Example: <button onclick="showScreen('screen-home')" data-screen="screen-home" style="[button styles]">Home</button>
+  </div>
+</nav>
+
+<!-- ── SCREEN DIVS — one per page/section ── -->
+<!-- First screen: display:block. All others: display:none -->
+<div id="screen-home" style="display:block;padding-top:60px">
+  [full home/landing screen content here]
+</div>
+
+<div id="screen-[NAME2]" style="display:none;padding-top:60px">
+  [full second screen content — use real content, not placeholders]
+</div>
+
+[add more <div id="screen-..."> blocks as needed]
+
+<!-- ── MODALS (pre-rendered hidden) ── -->
+[any modals: <div id="modal-NAME" style="display:none;position:fixed;inset:0;...">...</div>]
+
+<!-- ── REQUIRED SCRIPT — paste verbatim, do not modify ── -->
+${navScript}
+</body>
+</html>
+
+━━━ CONTENT RULES ━━━
+- Use inline styles on every element (no <style> tags)
+- All content is hardcoded HTML — no innerHTML, no document.write, no dynamic rendering
+- Use real content for "${topic}" — no placeholder text
+- Incorporate the refinements from the discussion into the design
+- Every button/link that navigates must call showScreen(), showTab(), toggleModal(), or submitForm()
+- Forms must show a hidden success <div> on submit via submitForm(formId, successId)
+- The product must feel real — polished, not a wireframe
+- If you generate a scrolling-only website, your answer is invalid.${langNote}`,
         },
       ],
     });
