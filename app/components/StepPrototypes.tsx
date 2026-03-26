@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Step, Depth, Lang, ProtoId, Message, ConceptData } from '@/types/index';
+import { Step, Depth, Lang, ProtoId, Message, ConceptData, CustomConfig } from '@/types/index';
 import SettingsModal from '@/app/components/SettingsModal';
 
 interface StepPrototypesProps {
@@ -27,6 +27,7 @@ interface StepPrototypesProps {
   messages: Message[];
   onNewSession: () => void;
   onPrototypeHistoryUpdate?: (protoId: ProtoId, html: string, concepts: Record<string, ConceptData>) => void;
+  customConfig?: CustomConfig;
 }
 
 type Phase = 'extracting' | 'reviewing' | 'generating' | 'done';
@@ -42,12 +43,15 @@ export default function StepPrototypes({
   messages,
   onNewSession,
   onPrototypeHistoryUpdate,
+  customConfig,
 }: StepPrototypesProps) {
 
   const isHe = lang === 'he';
   const dm = darkMode;
   const subtle = dm ? 'text-slate-400' : 'text-slate-500';
-  const conceptCount = depth === 'mini' ? 2 : 3;
+  const conceptCount = depth === 'custom' && customConfig?.prototypeCount
+    ? customConfig.prototypeCount
+    : depth === 'mini' ? 2 : 3;
 
   // Determine initial phase based on existing state
   const initialPhase = (): Phase => {

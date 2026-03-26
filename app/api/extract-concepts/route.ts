@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     return new Response("Missing topic or messages", { status: 400 });
   }
 
-  const conceptCount: number = count === 2 ? 2 : 3;
+  const conceptCount: number = count === 1 ? 1 : count === 2 ? 2 : 3;
 
   const langNote = lang === 'he'
     ? '\nIMPORTANT: Write all title, description, ux, and visual fields entirely in Hebrew (עברית).'
@@ -70,11 +70,10 @@ Return ONLY valid JSON in this exact shape (no markdown, no explanation):
     "description": "2-3 sentences describing what this product is and who it's for.",
     "ux": "Key UX idea — how the user interacts with it.",
     "visual": "Key visual/layout idea — what it looks like."
-  },
-  "B": { "id": "B", ... }${conceptCount === 3 ? ',\n  "C": { "id": "C", ... }' : ''}
+  }${conceptCount >= 2 ? ',\n  "B": { "id": "B", ... }' : ''}${conceptCount >= 3 ? ',\n  "C": { "id": "C", ... }' : ''}
 }`;
 
-  const requiredIds = conceptCount === 2 ? (["A", "B"] as const) : (["A", "B", "C"] as const);
+  const requiredIds = conceptCount === 1 ? (["A"] as const) : conceptCount === 2 ? (["A", "B"] as const) : (["A", "B", "C"] as const);
   let lastErr: unknown;
 
   for (let attempt = 0; attempt < 3; attempt++) {
