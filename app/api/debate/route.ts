@@ -53,7 +53,7 @@ async function* streamAgentTokens(
     const openai = new OpenAI({ apiKey: openaiKey });
     const stream = await openai.chat.completions.create({
       model: agent.model,
-      max_tokens: 600,
+      max_completion_tokens: 600,
       stream: true,
       messages: [
         { role: "system", content: agent.systemPrompt },
