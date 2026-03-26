@@ -2,7 +2,6 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AGENTS, Agent } from "@/lib/agents";
 import { buildUserPrompt, PreviousMessage } from "@/lib/prompts";
 
@@ -10,13 +9,11 @@ import { buildUserPrompt, PreviousMessage } from "@/lib/prompts";
 // Each agent's model string determines which SDK to use.
 // Anthropic: starts with "claude-"
 // OpenAI:    starts with "gpt-"
-// Google:    starts with "gemini-"
-type Provider = "anthropic" | "openai" | "google";
+type Provider = "anthropic" | "openai";
 
 function detectProvider(model: string): Provider {
   if (model.startsWith("claude-")) return "anthropic";
   if (model.startsWith("gpt-"))    return "openai";
-  if (model.startsWith("gemini-")) return "google";
   throw new Error(`Unknown model provider for: ${model}`);
 }
 
@@ -29,7 +26,6 @@ async function* streamAgentTokens(
   userPrompt: string,
   anthropic: Anthropic,
   openaiKey?: string,
-  geminiKey?: string,
 ): AsyncGenerator<string> {
   const provider = detectProvider(agent.model);
 
@@ -72,22 +68,6 @@ async function* streamAgentTokens(
     return;
   }
 
-  if (provider === "google") {
-    if (!geminiKey) throw new Error("Gemini API key not provided. Add it in Settings.");
-    const google = new GoogleGenerativeAI(geminiKey);
-    const geminiModel = google.getGenerativeModel({
-      model: agent.model,
-      systemInstruction: agent.systemPrompt,
-    });
-
-    const result = await geminiModel.generateContentStream(userPrompt);
-
-    for await (const chunk of result.stream) {
-      const token = chunk.text();
-      if (token) yield token;
-    }
-    return;
-  }
 }
 
 // ---------- Language instruction ----------
@@ -99,7 +79,7 @@ function langInstruction(lang: string): string {
 
 // ---------- POST handler ----------
 export async function POST(request: Request) {
-  const { topic, depth, lang = 'en', apiKey, openaiKey, geminiKey, agentModelOverrides, agentCount } = await request.json();
+  const { topic, depth, lang = 'en', apiKey, openaiKey, agentModelOverrides, agentCount } = await request.json();
   if (!apiKey) return new Response("No API key provided. Add your Anthropic key in Settings.", { status: 401 });
   const anthropic = new Anthropic({ apiKey });
 
@@ -110,10 +90,10 @@ export async function POST(request: Request) {
   const HAIKU = "claude-haiku-4-5-20251001" as const;
   let agents;
   if (depth === "custom" && agentModelOverrides && typeof agentModelOverrides === "object") {
-    const count = agentCount === 4 ? 4 : 8;
+    const count = 5;
     agents = AGENTS.slice(0, count).map(a => ({ ...a, model: (agentModelOverrides as Record<string, string>)[a.id] ?? a.model }));
   } else {
-    const agentCount = depth === "mini" ? 3 : depth === "quick" ? 4 : 8;
+    const agentCount = depth === "mini" ? 3 : depth === "quick" ? 4 : 5;
     agents = AGENTS.slice(0, agentCount).map(a =>
       depth === "mini" ? { ...a, model: HAIKU } : a
     );
@@ -177,7 +157,7 @@ If NO (gibberish, too short/vague, offensive, or clearly not a software idea): r
           };
 
           // Stream tokens from whichever provider this agent uses
-          for await (const token of streamAgentTokens(agentWithLang, userPrompt, anthropic, openaiKey, geminiKey)) {
+          for await (const token of streamAgentTokens(agentWithLang, userPrompt, anthropic, openaiKey)) {
             fullText += token;
             send("token", { id: agent.id, initials: agent.initials, token });
           }

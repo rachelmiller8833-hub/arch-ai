@@ -21,7 +21,6 @@ interface StepInputProps {
   settings: {
     anthropicKey: string;
     openaiKey: string;
-    geminiKey: string;
   };
   setSettings: (v: any) => void;
   navigateTo: (target: Step) => void;
@@ -60,6 +59,7 @@ export default function StepInput({
 }: StepInputProps) {
 
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
+  const [showOpenaiKey, setShowOpenaiKey] = useState(false);
   const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
   const [showCustomModal, setShowCustomModal] = useState(false);
   const isHe = lang === 'he';
@@ -148,29 +148,23 @@ export default function StepInput({
                       OpenAI API Key
                       <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="ml-2 text-indigo-500 hover:underline font-normal">Get key →</a>
                     </label>
-                    <input
-                      type="password"
-                      value={settings.openaiKey}
-                      onChange={e => setSettings({ ...settings, openaiKey: e.target.value })}
-                      placeholder="sk-..."
-                      className={`w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 ${input}`}
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        type={showOpenaiKey ? 'text' : 'password'}
+                        value={settings.openaiKey}
+                        onChange={e => setSettings({ ...settings, openaiKey: e.target.value })}
+                        placeholder="sk-..."
+                        className={`flex-1 px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 ${input}`}
+                      />
+                      <button
+                        onClick={() => setShowOpenaiKey(!showOpenaiKey)}
+                        className={`px-3 py-2 rounded-lg border text-xs ${dm ? 'border-slate-700 hover:bg-slate-800 text-slate-400' : 'border-slate-200 hover:bg-slate-100 text-slate-500'}`}
+                      >
+                        {showOpenaiKey ? 'Hide' : 'Show'}
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Gemini */}
-                  <div>
-                    <label className={`text-xs font-medium mb-1 block ${subtle}`}>
-                      Gemini API Key
-                      <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="ml-2 text-indigo-500 hover:underline font-normal">Get key →</a>
-                    </label>
-                    <input
-                      type="password"
-                      value={settings.geminiKey}
-                      onChange={e => setSettings({ ...settings, geminiKey: e.target.value })}
-                      placeholder="AIza..."
-                      className={`w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 ${input}`}
-                    />
-                  </div>
                 </div>
               </div>
 
@@ -429,7 +423,7 @@ export default function StepInput({
             {([
               { d: 'mini',  label: 'Mini',  labelHe: 'מיני',  sub: '3 agents · Haiku',   subHe: '3 סוכנים · Haiku'  },
               { d: 'quick', label: 'Quick', labelHe: 'מהיר', sub: '4 agents · 3 designs', subHe: '4 סוכנים · 3 עיצובים' },
-              { d: 'full',  label: 'Full',  labelHe: 'מלא',  sub: '8 agents · 3 designs', subHe: '8 סוכנים · 3 עיצובים' },
+              { d: 'full',  label: 'Full',  labelHe: 'מלא',  sub: '5 agents · 3 designs', subHe: '5 סוכנים · 3 עיצובים' },
             ] as const).map(({ d, label, labelHe, sub, subHe }) => {
               const active = depth === d;
               return (
@@ -466,7 +460,7 @@ export default function StepInput({
               <span className="text-xs font-semibold">{isHe ? 'מותאם ⚙' : 'Custom ⚙'}</span>
               <span className={`text-[10px] font-mono ${depth === 'custom' ? 'text-indigo-200' : dm ? 'text-slate-500' : 'text-slate-400'}`}>
                 {depth === 'custom'
-                  ? `${customConfig?.agentCount ?? 8} agents · ${customConfig?.prototypeCount ?? 3} proto`
+                  ? `${customConfig?.agentCount ?? 5} agents · ${customConfig?.prototypeCount ?? 3} proto`
                   : (isHe ? 'הגדרה עצמית' : 'configure')}
               </span>
             </button>

@@ -22,13 +22,13 @@ const TEXT = {
     diff_sub: "It's a multi-agent war room where engineers respond to each other, build on what was said, and real disagreements happen.",
     diff_items: [
       { icon: '⚔️', title: 'Real debate', body: 'Jordan warns about costs. Sarah demands security from day one. Marcus kills features ruthlessly. They argue with each other — not just with you.' },
-      { icon: '🧠', title: 'Multi-model', body: 'Claude Opus, Sonnet, Haiku, GPT and Gemini 2.5 — each agent uses the right model for their role and the chosen depth.' },
+      { icon: '🧠', title: 'Multi-model', body: 'Claude Opus, Sonnet, Haiku and GPT — each agent uses the right model for their role and the chosen depth.' },
       { icon: '📋', title: 'PRD-quality output', body: 'The result reads like a document written by a senior team. Structured, opinionated, and immediately actionable.' },
     ],
 
     get_title: 'What you get at the end',
     get_items: [
-      { icon: '🏗️', title: 'Architecture Decision Record', body: 'A full technical breakdown: every design decision, trade-off, and recommendation from your 8-engineer debate.' },
+      { icon: '🏗️', title: 'Architecture Decision Record', body: 'A full technical breakdown: every design decision, trade-off, and recommendation from your 5-agent debate.' },
       { icon: '📄', title: 'Product Requirements Document', body: 'Roles, responsibilities, timelines, and feature specs — synthesized from the actual debate, not from generic templates.' },
       { icon: '🖥️', title: '3 Working UI Prototypes', body: 'Three distinct interfaces built by Claude from your debate content. Pick one and keep refining it.' },
     ],
@@ -36,7 +36,7 @@ const TEXT = {
     steps_title: 'How to get started',
     steps: [
       { icon: '✏️', title: 'Describe your idea', body: 'Write a few sentences about what you want to build. The more detail, the better the analysis.' },
-      { icon: '⚡', title: 'Choose your depth', body: 'Quick mode: 4 agents, ~30 seconds. Full mode: all 8 engineers, deeper analysis.' },
+      { icon: '⚡', title: 'Choose your depth', body: 'Quick mode: 4 agents, ~30 seconds. Full mode: all 5 agents, deeper analysis.' },
       { icon: '👁️', title: 'Watch the debate', body: 'Your engineering team streams their analysis live, agent by agent, responding to each other in real time.' },
       { icon: '🎨', title: 'Pick a prototype', body: 'Three UI designs are generated from your specific debate content. Choose the direction you like.' },
       { icon: '🔁', title: 'Keep refining', body: 'Ask follow-up questions and get targeted answers from the same team.' },
@@ -44,7 +44,7 @@ const TEXT = {
 
     demo_label: 'No API key?',
     demo_cta: 'Watch live demo — Retro Games Site',
-    demo_sub: 'Replays a full 8-agent debate with pre-built prototypes',
+    demo_sub: 'Replays a full 5-agent debate with pre-built prototypes',
     divider: 'Configure your session below',
     scroll: 'Scroll to explore',
     step_label: (i: number) => `Step ${i + 1}`,
@@ -54,20 +54,20 @@ const TEXT = {
     badge: 'מערכת רב-סוכנים AI',
     headline1: 'צוות ההנדסה של AI',
     headline2: 'שתמיד רצית',
-    sub: 'תאר את רעיון התוכנה שלך, ו-8 מהנדסי AI בכירים — כל אחד עם תפקיד, אישיות ומודל שונה — ידונו בו בזמן אמת ויחזירו לך החלטה טכנית מלאה.',
+    sub: 'תאר את רעיון התוכנה שלך, ו-5 מהנדסי AI בכירים — כל אחד עם תפקיד, אישיות ומודל שונה — ידונו בו בזמן אמת ויחזירו לך החלטה טכנית מלאה.',
     cta: 'התחל לבנות',
 
     diff_title: 'זה לא צ׳אטבוט',
     diff_sub: 'זו חדר מלחמה רב-סוכנים שבו מהנדסים מגיבים זה לזה, בונים על מה שנאמר, ומחלוקות אמיתיות קורות.',
     diff_items: [
       { icon: '⚔️', title: 'דיון אמיתי', body: 'ג׳ורדן מזהיר מעלויות. שרה דורשת אבטחה מהיום הראשון. מרקוס הורג פיצ׳רים ללא רחמים. הם מתווכחים זה עם זה.' },
-      { icon: '🧠', title: 'רב-מודל', body: 'Claude Opus, Sonnet, Haiku, GPT ו-Gemini 2.5 — כל סוכן משתמש במודל המתאים לתפקידו ולעומק הנבחר.' },
+      { icon: '🧠', title: 'רב-מודל', body: 'Claude Opus, Sonnet, Haiku ו-GPT — כל סוכן משתמש במודל המתאים לתפקידו ולעומק הנבחר.' },
       { icon: '📋', title: 'פלט ברמת PRD', body: 'התוצאה נראית כמו מסמך שכתב צוות בכיר. מובנה, דעתני, ומעשי מיד.' },
     ],
 
     get_title: 'מה מקבלים בסוף',
     get_items: [
-      { icon: '🏗️', title: 'רשומת החלטות ארכיטקטורה', body: 'פירוט טכני מלא: כל החלטת עיצוב, פשרה והמלצה מהדיון של 8 המהנדסים.' },
+      { icon: '🏗️', title: 'רשומת החלטות ארכיטקטורה', body: 'פירוט טכני מלא: כל החלטת עיצוב, פשרה והמלצה מהדיון של 5 הסוכנים.' },
       { icon: '📄', title: 'מסמך דרישות מוצר', body: 'תפקידים, אחריויות, לוחות זמנים ומפרטי פיצ׳רים — מסוכמים מהדיון האמיתי, לא מתבניות גנריות.' },
       { icon: '🖥️', title: '3 אבות-טיפוס UI עובדים', body: 'שלושה ממשקים שנבנו על ידי Claude מתוכן הדיון שלך. בחר אחד והמשך לשפר אותו.' },
     ],
@@ -75,7 +75,7 @@ const TEXT = {
     steps_title: 'איך מתחילים',
     steps: [
       { icon: '✏️', title: 'תאר את הרעיון', body: 'כתוב כמה משפטים על מה שאתה רוצה לבנות. ככל שיש יותר פרטים, כך הניתוח טוב יותר.' },
-      { icon: '⚡', title: 'בחר את העומק', body: 'מצב מהיר: 4 סוכנים, ~30 שניות. מצב מלא: כל 8 המהנדסים, ניתוח מעמיק.' },
+      { icon: '⚡', title: 'בחר את העומק', body: 'מצב מהיר: 4 סוכנים, ~30 שניות. מצב מלא: כל 5 הסוכנים, ניתוח מעמיק.' },
       { icon: '👁️', title: 'צפה בדיון', body: 'צוות ההנדסה שלך מזרים את הניתוח שלהם בשידור חי, סוכן אחרי סוכן, מגיבים זה לזה.' },
       { icon: '🎨', title: 'בחר אב-טיפוס', body: 'שלושה עיצובי UI נוצרים מתוכן הדיון הספציפי שלך. בחר את הכיוון שאתה אוהב.' },
       { icon: '🔁', title: 'המשך לשפר', body: 'שאל שאלות המשך וקבל תשובות ממוקדות מאותו צוות.' },
@@ -83,7 +83,7 @@ const TEXT = {
 
     demo_label: 'אין מפתח API?',
     demo_cta: 'צפה בדמו חי — אתר משחקי רטרו',
-    demo_sub: 'משחזר דיון מלא של 8 סוכנים עם אבות-טיפוס מוכנים',
+    demo_sub: 'משחזר דיון מלא של 5 סוכנים עם אבות-טיפוס מוכנים',
     divider: 'הגדר את הסשן שלך למטה',
     scroll: 'גלול לחקור',
     step_label: (i: number) => `שלב ${i + 1}`,

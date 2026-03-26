@@ -15,7 +15,7 @@ export type Lang = 'en' | 'he';
 export interface CustomConfig {
   agentModels: Record<string, string>; // agent id → model id
   prototypeCount: 1 | 2 | 3;
-  agentCount: 4 | 8;
+  agentCount: number;
 }
 export type ProtoId = 'A' | 'B' | 'C' | null;
 

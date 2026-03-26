@@ -2,16 +2,14 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AGENTS } from "@/lib/agents";
 
 // ---------- Provider detection ----------
-type Provider = "anthropic" | "openai" | "google";
+type Provider = "anthropic" | "openai";
 
 function detectProvider(model: string): Provider {
   if (model.startsWith("claude-")) return "anthropic";
   if (model.startsWith("gpt-"))    return "openai";
-  if (model.startsWith("gemini-")) return "google";
   throw new Error(`Unknown provider for model: ${model}`);
 }
 
@@ -31,7 +29,6 @@ async function* streamTokens(
   userPrompt: string,
   anthropic: Anthropic,
   openaiKey?: string,
-  geminiKey?: string,
 ): AsyncGenerator<string> {
   const provider = detectProvider(model);
 
@@ -72,25 +69,11 @@ async function* streamTokens(
     return;
   }
 
-  if (provider === "google") {
-    if (!geminiKey) throw new Error("Gemini API key not provided. Add it in Settings.");
-    const google = new GoogleGenerativeAI(geminiKey);
-    const geminiModel = google.getGenerativeModel({
-      model,
-      systemInstruction: systemPrompt,
-    });
-    const result = await geminiModel.generateContentStream(userPrompt);
-    for await (const chunk of result.stream) {
-      const token = chunk.text();
-      if (token) yield token;
-    }
-    return;
-  }
 }
 
 // ---------- Build the follow-up prompt ----------
 // Only 3 agents respond to follow-up questions:
-// Maya (orchestrator), David (architect), Alex (AI engineer).
+// Maya (orchestrator), Priya (UX designer), Alex (interaction engineer).
 // This keeps costs low and responses focused.
 function buildFollowUpPrompt(
   question: string,
@@ -122,7 +105,7 @@ function langInstruction(lang: string): string {
 
 // ---------- POST handler ----------
 export async function POST(request: Request) {
-  const { topic, question, protoName, previousMessages, lang = 'en', depth = 'full', apiKey, openaiKey, geminiKey } = await request.json();
+  const { topic, question, protoName, previousMessages, lang = 'en', depth = 'full', apiKey, openaiKey } = await request.json();
   if (!apiKey) return new Response("No API key provided. Add your Anthropic key in Settings.", { status: 401 });
   const anthropic = new Anthropic({ apiKey });
 
@@ -134,7 +117,7 @@ export async function POST(request: Request) {
 
   // Only these 3 agents respond to follow-up questions
   const HAIKU = "claude-haiku-4-5-20251001";
-  const CONTINUE_AGENT_IDS = ["maya", "david", "alex"];
+  const CONTINUE_AGENT_IDS = ["maya", "priya", "alex"];
   const agents = AGENTS
     .filter(a => CONTINUE_AGENT_IDS.includes(a.id))
     .map(a => depth === "mini" ? { ...a, model: HAIKU } : a);
@@ -174,7 +157,6 @@ export async function POST(request: Request) {
             userPrompt,
             anthropic,
             openaiKey,
-            geminiKey,
           )) {
             fullText += token;
             send("token", { id: agent.id, initials: agent.initials, token });

@@ -27,7 +27,7 @@ export default function ProjectPage() {
   const [customConfig, setCustomConfig] = useState<CustomConfig>({
     agentModels: Object.fromEntries(AGENTS.map(a => [a.id, a.model])),
     prototypeCount: 3,
-    agentCount: 8,
+    agentCount: 5,
   });
 
   // ---- Debate state ----
@@ -58,11 +58,11 @@ export default function ProjectPage() {
   // ---- Settings (persisted to localStorage) ----
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState(() => {
-    if (typeof window === 'undefined') return { anthropicKey: '', openaiKey: '', geminiKey: '' };
+    if (typeof window === 'undefined') return { anthropicKey: '', openaiKey: '' };
     try {
       const saved = localStorage.getItem('archai_settings');
-      return saved ? JSON.parse(saved) : { anthropicKey: '', openaiKey: '', geminiKey: '' };
-    } catch { return { anthropicKey: '', openaiKey: '', geminiKey: '' }; }
+      return saved ? JSON.parse(saved) : { anthropicKey: '', openaiKey: '' };
+    } catch { return { anthropicKey: '', openaiKey: '' }; }
   });
 
   function setSettingsAndPersist(v: any) {

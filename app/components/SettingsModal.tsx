@@ -11,7 +11,6 @@ interface SettingsModalProps {
   settings: {
     anthropicKey: string;
     openaiKey: string;
-    geminiKey: string;
   };
   setSettings: (v: any) => void;
   darkMode: boolean;
@@ -23,6 +22,7 @@ export default function SettingsModal({
   show, onClose, onSave, settings, setSettings, darkMode, lang, showToast,
 }: SettingsModalProps) {
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
+  const [showOpenaiKey, setShowOpenaiKey] = useState(false);
   const dm = darkMode;
   const isHe = lang === 'he';
   const subtle = dm ? 'text-slate-400' : 'text-slate-500';
@@ -99,29 +99,23 @@ export default function SettingsModal({
                   OpenAI API Key <span className={subtle}>(optional)</span>
                   <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="ml-2 text-indigo-500 hover:underline font-normal">Get key →</a>
                 </label>
-                <input
-                  type="password"
-                  value={settings.openaiKey}
-                  onChange={e => setSettings({ ...settings, openaiKey: e.target.value })}
-                  placeholder="sk-..."
-                  className={`w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 ${input}`}
-                />
+                <div className="flex gap-2">
+                  <input
+                    type={showOpenaiKey ? 'text' : 'password'}
+                    value={settings.openaiKey}
+                    onChange={e => setSettings({ ...settings, openaiKey: e.target.value })}
+                    placeholder="sk-..."
+                    className={`flex-1 px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 ${input}`}
+                  />
+                  <button
+                    onClick={() => setShowOpenaiKey(!showOpenaiKey)}
+                    className={`px-3 py-2 rounded-lg border text-xs ${dm ? 'border-slate-700 hover:bg-slate-800 text-slate-400' : 'border-slate-200 hover:bg-slate-100 text-slate-500'}`}
+                  >
+                    {showOpenaiKey ? 'Hide' : 'Show'}
+                  </button>
+                </div>
               </div>
 
-              {/* Gemini */}
-              <div>
-                <label className={`text-xs font-medium mb-1 block ${subtle}`}>
-                  Gemini API Key <span className={subtle}>(optional)</span>
-                  <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="ml-2 text-indigo-500 hover:underline font-normal">Get key →</a>
-                </label>
-                <input
-                  type="password"
-                  value={settings.geminiKey}
-                  onChange={e => setSettings({ ...settings, geminiKey: e.target.value })}
-                  placeholder="AIza..."
-                  className={`w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-indigo-500/30 ${input}`}
-                />
-              </div>
             </div>
           </div>
 

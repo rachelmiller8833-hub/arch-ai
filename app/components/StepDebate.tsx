@@ -29,7 +29,7 @@ interface StepDebateProps {
   // Settings
   showSettings: boolean;
   setShowSettings: (v: boolean) => void;
-  settings: { anthropicKey: string; openaiKey: string; geminiKey: string; };
+  settings: { anthropicKey: string; openaiKey: string; };
   setSettings: (v: any) => void;
   // New session
   onNewSession: () => void;
@@ -185,9 +185,8 @@ export default function StepDebate({
           topic, depth, lang,
           apiKey:         settings.anthropicKey || undefined,
           openaiKey:      settings.openaiKey    || undefined,
-          geminiKey:      settings.geminiKey    || undefined,
           agentModelOverrides: depth === 'custom' ? customConfig?.agentModels : undefined,
-          agentCount: depth === 'custom' ? (customConfig?.agentCount ?? 8) : undefined,
+          agentCount: depth === 'custom' ? (customConfig?.agentCount ?? 5) : undefined,
         }),
       });
 
@@ -391,8 +390,8 @@ export default function StepDebate({
   }
 
   const agentCount = depth === 'custom'
-    ? (customConfig?.agentCount ?? 8)
-    : depth === 'mini' ? 3 : depth === 'quick' ? 4 : 8;
+    ? (customConfig?.agentCount ?? 5)
+    : depth === 'mini' ? 3 : depth === 'quick' ? 4 : 5;
 
   return (
     <div dir={isHe ? 'rtl' : 'ltr'} className="min-h-screen flex flex-col">

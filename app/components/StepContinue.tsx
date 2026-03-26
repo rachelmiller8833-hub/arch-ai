@@ -17,7 +17,7 @@ interface StepContinueProps {
   showToast: (msg: string) => void;
   showSettings: boolean;
   setShowSettings: (v: boolean) => void;
-  settings: { anthropicKey: string; openaiKey: string; geminiKey: string; };
+  settings: { anthropicKey: string; openaiKey: string; };
   setSettings: (v: any) => void;
   generatedConcepts: Record<string, ConceptData>;
   // Original debate messages (read-only, shown as context)
@@ -176,7 +176,6 @@ export default function StepContinue({
           protoName,
           apiKey:    settings.anthropicKey || undefined,
           openaiKey: settings.openaiKey    || undefined,
-          geminiKey: settings.geminiKey    || undefined,
           // Send the last 6 messages as context to keep the request lean
           previousMessages: [...messages, ...continueMessages]
             .filter(m => !m.isConclusion)

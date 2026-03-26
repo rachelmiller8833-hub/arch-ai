@@ -19,7 +19,7 @@ export const MODELS: {
   id: AgentModel;
   label: string;
   short: string;
-  provider: 'Anthropic' | 'OpenAI' | 'Google';
+  provider: 'Anthropic' | 'OpenAI';
   tier: 'fast' | 'balanced' | 'powerful';
   inputPer1M: number;
   outputPer1M: number;
@@ -30,13 +30,11 @@ export const MODELS: {
   { id: 'claude-sonnet-4-6',         label: 'Sonnet 4.6',   short: 'Sonnet',  provider: 'Anthropic', tier: 'balanced',  inputPer1M: 3.00,  outputPer1M: 15.00, speed: 2, quality: 2 },
   { id: 'claude-opus-4-6',           label: 'Opus 4.6',     short: 'Opus',    provider: 'Anthropic', tier: 'powerful',  inputPer1M: 15.00, outputPer1M: 75.00, speed: 1, quality: 3 },
   { id: 'gpt-5.4',                   label: 'GPT-5.4',      short: 'GPT',     provider: 'OpenAI',    tier: 'balanced',  inputPer1M: 2.50,  outputPer1M: 10.00, speed: 2, quality: 2 },
-  { id: 'gemini-2.5-pro',            label: 'Gemini 2.5',   short: 'Gemini',  provider: 'Google',    tier: 'balanced',  inputPer1M: 1.25,  outputPer1M: 5.00,  speed: 2, quality: 2 },
 ];
 
 const PROVIDER_COLOR: Record<string, string> = {
   Anthropic: '#e97b47',
   OpenAI:    '#10a37f',
-  Google:    '#4285f4',
 };
 
 // ── Token estimates per agent slot ─────────────────────────────────────────
@@ -72,14 +70,13 @@ export default function CustomModal({ show, onClose, onApply, initial, lang }: O
   const isHe = lang === 'he';
   const [agentModels, setAgentModels] = useState<Record<string, string>>(initial.agentModels);
   const [protoCount, setProtoCount]   = useState<1|2|3>(initial.prototypeCount);
-  const [agentCount, setAgentCount]   = useState<4|8>(initial.agentCount ?? 8);
+  const agentCount = 5;
   const [view, setView]               = useState<'main' | 'compare'>('main');
 
   useEffect(() => {
     if (show) {
       setAgentModels(initial.agentModels);
       setProtoCount(initial.prototypeCount);
-      setAgentCount(initial.agentCount ?? 8);
       setView('main');
     }
   }, [show]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -179,26 +176,6 @@ export default function CustomModal({ show, onClose, onApply, initial, lang }: O
 
       {/* Scrollable body */}
       <div className="overflow-y-auto flex-1" style={{ maxHeight: '55vh' }}>
-
-        {/* Agent count toggle */}
-        <p className={secLbl}>{isHe ? 'מספר סוכנים' : 'Number of Agents'}</p>
-        <div className="px-5 pb-5">
-          <div className="flex rounded-xl overflow-hidden border border-slate-700">
-            {([4, 8] as const).map(n => (
-              <button
-                key={n}
-                onClick={() => setAgentCount(n)}
-                className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${
-                  agentCount === n ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800'
-                } ${n === 4 ? 'border-r border-slate-700' : ''}`}
-              >
-                {n} {isHe ? 'סוכנים' : 'agents'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className={divider} />
 
         {/* Agent model pickers */}
         <p className={secLbl}>{isHe ? 'מודל לכל מהנדס' : 'Model per Engineer'}</p>
