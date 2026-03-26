@@ -54,7 +54,33 @@ REQUIREMENTS — every item is mandatory:
 9. Use Google Fonts via a single <link> tag in <head> if needed.
 10. No other external dependencies.
 11. Return ONLY the HTML. Start with <!DOCTYPE html>. No markdown, no explanation.
-12. CRITICAL: All HTML content must be hardcoded directly in the HTML — never use JavaScript to generate or inject HTML (no innerHTML, no document.write, no render() functions). JavaScript may ONLY toggle visibility/styles on elements that already exist in the HTML. The page must display full content on load even if JavaScript is disabled.${langNote}`;
+12. CRITICAL: All HTML content must be hardcoded directly in the HTML — never use JavaScript to generate or inject HTML (no innerHTML, no document.write, no render() functions). JavaScript may ONLY toggle visibility/styles on elements that already exist in the HTML. The page must display full content on load even if JavaScript is disabled.
+
+MULTI-SCREEN NAVIGATION — you MUST implement all navigation this way:
+- Every distinct screen/page is a <div> with a unique id, e.g. id="screen-home", id="screen-dashboard", id="screen-settings"
+- Only the first screen starts visible (style="display:block"); all others start hidden (style="display:none")
+- Every nav link, menu item, tab, or button that switches screens must call: showScreen('screen-id')
+- Place this function in a <script> tag at the bottom of <body>:
+    function showScreen(id) {
+      document.querySelectorAll('[id^="screen-"]').forEach(function(s){ s.style.display='none'; });
+      document.getElementById(id).style.display='block';
+      document.querySelectorAll('[data-screen]').forEach(function(el){ el.style.opacity = el.dataset.screen===id?'1':'0.5'; });
+    }
+    function showTab(containerId, tabId) {
+      var c = document.getElementById(containerId);
+      c.querySelectorAll('[id^="tab-"]').forEach(function(t){ t.style.display='none'; });
+      document.getElementById(tabId).style.display='block';
+    }
+    function toggleModal(id) {
+      var el = document.getElementById(id);
+      el.style.display = el.style.display==='none'?'flex':'none';
+    }
+- Add data-screen="screen-id" to nav links so the active state highlights correctly
+- For tabs within a screen: use showTab(containerId, tabId) — same pattern, scoped to a container
+- For modals/drawers: pre-render them hidden (display:none), toggle with toggleModal(id)
+- For dropdowns/accordions: pre-render collapsed, toggle max-height or display on click
+- For forms: show a success message div (pre-rendered, hidden) and hide the form on submit
+- EVERY clickable element must have an onclick that calls one of the above functions${langNote}`;
 
 export async function POST(request: Request) {
   const { topic, concepts, lang = 'en', apiKey } = await request.json() as {

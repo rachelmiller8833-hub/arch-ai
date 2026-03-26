@@ -62,7 +62,32 @@ CRITICAL RULES — read carefully:
 5. Incorporate the refinements from the discussion above into the design.
 6. Use Google Fonts via a single <link> tag in <head> if needed.
 7. No other external dependencies.
-8. Return ONLY the HTML. Start with <!DOCTYPE html>. No markdown, no explanation.${langNote}`,
+8. Return ONLY the HTML. Start with <!DOCTYPE html>. No markdown, no explanation.
+
+MULTI-SCREEN NAVIGATION — you MUST implement all navigation this way:
+- Every distinct screen/page is a <div> with a unique id, e.g. id="screen-home", id="screen-dashboard"
+- Only the first screen starts visible (style="display:block"); all others start hidden (style="display:none")
+- Every nav link, menu item, tab, or button that switches screens must call: showScreen('screen-id')
+- Place this function in a <script> tag at the bottom of <body>:
+    function showScreen(id) {
+      document.querySelectorAll('[id^="screen-"]').forEach(function(s){ s.style.display='none'; });
+      document.getElementById(id).style.display='block';
+      document.querySelectorAll('[data-screen]').forEach(function(el){ el.style.opacity = el.dataset.screen===id?'1':'0.5'; });
+    }
+    function showTab(containerId, tabId) {
+      var c = document.getElementById(containerId);
+      c.querySelectorAll('[id^="tab-"]').forEach(function(t){ t.style.display='none'; });
+      document.getElementById(tabId).style.display='block';
+    }
+    function toggleModal(id) {
+      var el = document.getElementById(id);
+      el.style.display = el.style.display==='none'?'flex':'none';
+    }
+- Add data-screen="screen-id" to nav links so the active state highlights correctly
+- For tabs within a screen: use showTab(containerId, tabId)
+- For modals/drawers: pre-render them hidden (display:none), toggle with toggleModal(id)
+- For forms: show a success message div (pre-rendered, hidden) and hide the form on submit
+- EVERY clickable element must have an onclick that calls one of the above functions${langNote}`,
         },
       ],
     });
