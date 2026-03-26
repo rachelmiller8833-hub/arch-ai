@@ -68,6 +68,7 @@ export default function StepPrototypes({
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<'A' | 'B' | 'C' | null>(null);
   const [editDraft, setEditDraft] = useState<ConceptData | null>(null);
+  const [pendingSelect, setPendingSelect] = useState<ProtoId>(null);
 
   function startEdit(concept: ConceptData) {
     setEditingId(concept.id);
@@ -168,6 +169,19 @@ export default function StepPrototypes({
     }
   }
 
+  async function fetchWithRetry(id: 'A' | 'B' | 'C', maxAttempts = 3) {
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        await fetchOnePrototype(id);
+        return;
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    throw lastErr;
+  }
+
   async function generatePrototypes() {
     setPhase('generating');
     setGenerationError(null);
@@ -178,7 +192,7 @@ export default function StepPrototypes({
 
     for (const id of ids) {
       try {
-        await fetchOnePrototype(id);
+        await fetchWithRetry(id);
       } catch (err) {
         setProtoErrors(prev => ({ ...prev, [id]: String(err) }));
       }
@@ -191,7 +205,7 @@ export default function StepPrototypes({
     setProtoErrors(prev => { const e = { ...prev }; delete e[id]; return e; });
     setLoadingIds(prev => new Set([...prev, id]));
     try {
-      await fetchOnePrototype(id);
+      await fetchWithRetry(id);
     } catch (err) {
       setProtoErrors(prev => ({ ...prev, [id]: String(err) }));
     }
@@ -209,7 +223,15 @@ export default function StepPrototypes({
     if (!id) return;
     setSelectedProto(id);
     onPrototypeHistoryUpdate?.(id, generatedPrototypes[id] || '', generatedConcepts);
+    setPendingSelect(id);
+  }
+
+  function handleContinueDiscussion() {
     navigateTo('continue');
+  }
+
+  function handleSaveExit() {
+    onNewSession();
   }
 
   function handleDownloadHTML(id: ProtoId) {
@@ -639,14 +661,31 @@ export default function StepPrototypes({
                           ⬇ HTML
                         </button>
                       </div>
-                      <button
-                        onClick={() => handleSelect(id)}
-                        className={`w-full py-2 rounded-lg text-xs font-semibold transition-colors ${
-                          selectedProto === id ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                        }`}
-                      >
-                        {selectedProto === id ? (isHe ? '✓ נבחר' : '✓ Selected') : (isHe ? 'בחר זה ←' : 'Select This →')}
-                      </button>
+                      {pendingSelect === id ? (
+                        <>
+                          <button
+                            onClick={handleContinueDiscussion}
+                            className="w-full py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
+                          >
+                            {isHe ? 'המשך דיון ←' : 'Continue Discussion →'}
+                          </button>
+                          <button
+                            onClick={handleSaveExit}
+                            className={`w-full py-2 rounded-lg text-xs font-semibold border transition-colors ${
+                              dm ? 'border-slate-700 hover:bg-slate-800 text-slate-300' : 'border-slate-200 hover:bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            {isHe ? '💾 שמור וצא' : '💾 Save & Exit'}
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => handleSelect(id)}
+                          className="w-full py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
+                        >
+                          {isHe ? 'בחר זה ←' : 'Select This →'}
+                        </button>
+                      )}
                     </>
                   ) : null}
                 </div>

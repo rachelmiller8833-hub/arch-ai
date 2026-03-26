@@ -53,7 +53,8 @@ REQUIREMENTS — every item is mandatory:
 8. Make it look like a real launched product (polished, not a wireframe).
 9. Use Google Fonts via a single <link> tag in <head> if needed.
 10. No other external dependencies.
-11. Return ONLY the HTML. Start with <!DOCTYPE html>. No markdown, no explanation.${langNote}`;
+11. Return ONLY the HTML. Start with <!DOCTYPE html>. No markdown, no explanation.
+12. CRITICAL: All HTML content must be hardcoded directly in the HTML — never use JavaScript to generate or inject HTML (no innerHTML, no document.write, no render() functions). JavaScript may ONLY toggle visibility/styles on elements that already exist in the HTML. The page must display full content on load even if JavaScript is disabled.${langNote}`;
 
 export async function POST(request: Request) {
   const { topic, concepts, lang = 'en', apiKey } = await request.json() as {
